@@ -7,12 +7,13 @@
     "test": "hardhat test",
     "test:upgradeable": "hardhat test test/ERC8004Upgradeable.ts",
     "test:all": "hardhat test test/ERC8004.ts && hardhat test test/ERC8004Upgradeable.ts",
-    "local": "npx hardhat node",
-    "deploy": "npx hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
-    "deploy:upgradeable": "npx hardhat run scripts/deploy-upgradeable.ts --network localhost",
-    "deploy:upgradeable:sepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network sepolia",
-    "upgrade": "npx hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "npx hardhat run scripts/upgrade-contracts.ts --network sepolia"
+    "local": "hardhat node",
+    "deploy": "hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
+    "deploy:upgradeable": "hardhat run scripts/deploy-upgradeable.ts --network localhost",
+    "deploy:upgradeable:sepolia": "hardhat run scripts/deploy-upgradeable.ts --network sepolia",
+    "deploy:create2": "tsx scripts/deploy-with-create2.ts",
+    "upgrade": "hardhat run scripts/upgrade-contracts.ts --network localhost",
+    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +26,7 @@
     "@types/node": "^22.18.8",
     "ethers": "^6.15.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
-    "hardhat": "^3.0.6",
+    "hardhat": "^3.0.8",
     "typescript": "~5.8.0",
     "viem": "^2.38.0"
   },

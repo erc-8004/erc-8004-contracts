@@ -1,12 +1,37 @@
 import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-verify";
 
 import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { configVariable } from "hardhat/config";
+import { defineChain } from "viem";
+
+// Define 0G Newton Testnet chain
+const zeroGNewton = defineChain({
+  id: 16602,
+  name: '0G Newton Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: '0G',
+    symbol: 'A0GI',
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://evmrpc-testnet.0g.ai'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: '0G Explorer',
+      url: 'https://chainscan-newton.0g.ai',
+    },
+  },
+  testnet: true,
+});
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxViemPlugin],
+  plugins: [],  // Temporarily disabled viem plugin for 0G deployment
   solidity: {
     profiles: {
       default: {
@@ -46,7 +71,31 @@ const config: HardhatUserConfig = {
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    zeroG: {
+      type: "http",
+      url: "https://evmrpc-testnet.0g.ai",
+      accounts: [configVariable("ZEROG_PRIVATE_KEY")],
+      chainId: 16602,
+    },
   },
+  etherscan: {
+    apiKey: {
+      zeroG: "no-api-key-needed", // 0G explorer might not require API key
+    },
+    customChains: [
+      {
+        network: "zeroG",
+        chainId: 16602,
+        urls: {
+          apiURL: "https://chainscan-newton.0g.ai/api",
+          browserURL: "https://chainscan-newton.0g.ai"
+        }
+      }
+    ]
+  },
+  sourcify: {
+    enabled: false
+  }
 };
 
 export default config;

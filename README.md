@@ -81,6 +81,32 @@ This project uses:
 - **TypeScript** for type safety
 - **OpenZeppelin Contracts** for ERC-721 implementation
 
+## Deployed Addresses
+
+**All addresses follow the canonical `0x8004` pattern:**
+
+### Sepolia
+- Identity: [`0x8004a6090Cd10A7288092483047B097295Fb8847`](https://sepolia.etherscan.io/address/0x8004a6090Cd10A7288092483047B097295Fb8847)
+- Reputation: [`0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E`](https://sepolia.etherscan.io/address/0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E)
+- Validation: [`0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5`](https://sepolia.etherscan.io/address/0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5)
+
+### Base Sepolia
+- Identity: [`0x8004AA63c570c570eBF15376c0dB199918BFe9Fb`](https://sepolia.basescan.org/address/0x8004AA63c570c570eBF15376c0dB199918BFe9Fb)
+- Reputation: [`0x8004bd8daB57f14Ed299135749a5CB5c42d341BF`](https://sepolia.basescan.org/address/0x8004bd8daB57f14Ed299135749a5CB5c42d341BF)
+- Validation: [`0x8004C269D0A5647E51E121FeB226200ECE932d55`](https://sepolia.basescan.org/address/0x8004C269D0A5647E51E121FeB226200ECE932d55)
+
+### Linea Sepolia
+- Identity: [`0x8004aa7C931bCE1233973a0C6A667f73F66282e7`](https://sepolia.lineascan.build/address/0x8004aa7C931bCE1233973a0C6A667f73F66282e7)
+- Reputation: [`0x8004bd8483b99310df121c46ED8858616b2Bba02`](https://sepolia.lineascan.build/address/0x8004bd8483b99310df121c46ED8858616b2Bba02)
+- Validation: [`0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB`](https://sepolia.lineascan.build/address/0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB)
+
+### 0G Galileo Testnet (Chain ID: 16602)
+
+- Identity: [`0x80043ed9cf33a3472768dcd53175bb44e03a1e4a`](https://chainscan-galileo.0g.ai/address/0x80043ed9cf33a3472768dcd53175bb44e03a1e4a)
+- Reputation: [`0x80045d7b72c47bf5ff73737b780cb1a5ba8ee202`](https://chainscan-galileo.0g.ai/address/0x80045d7b72c47bf5ff73737b780cb1a5ba8ee202)
+- Validation: [`0x80041728e0aadf1d1427f9be18d52b7f3afefafb`](https://chainscan-galileo.0g.ai/address/0x80041728e0aadf1d1427f9be18d52b7f3afefafb)
+
+
 ## Protocol Overview
 
 ### Agent Registration
