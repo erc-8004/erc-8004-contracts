@@ -1,9 +1,9 @@
 import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-verify";
 
 import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import { configVariable } from "hardhat/config";
 import { defineChain } from "viem";
 
@@ -31,7 +31,7 @@ const zeroGNewton = defineChain({
 });
 
 const config: HardhatUserConfig = {
-  plugins: [],  // Temporarily disabled viem plugin for 0G deployment
+  plugins: [hardhatVerify],
   solidity: {
     profiles: {
       default: {
@@ -80,18 +80,33 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      zeroG: "no-api-key-needed", // 0G explorer might not require API key
+      zeroG: "no-api-key-needed"
     },
     customChains: [
       {
         network: "zeroG",
         chainId: 16602,
         urls: {
-          apiURL: "https://chainscan-newton.0g.ai/api",
-          browserURL: "https://chainscan-newton.0g.ai"
+          apiURL: "https://chainscan-galileo.0g.ai/open/api",
+          browserURL: "https://chainscan-galileo.0g.ai"
         }
       }
     ]
+  },
+  verify: {
+    etherscan: {
+      apiKey: "no-api-key-needed",
+      customChains: [
+        {
+          network: "zeroG",
+          chainId: 16602,
+          urls: {
+            apiURL: "https://chainscan-galileo.0g.ai/open/api",
+            browserURL: "https://chainscan-galileo.0g.ai"
+          }
+        }
+      ]
+    }
   },
   sourcify: {
     enabled: false

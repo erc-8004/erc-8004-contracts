@@ -13,7 +13,9 @@
     "deploy:upgradeable:sepolia": "hardhat run scripts/deploy-upgradeable.ts --network sepolia",
     "deploy:create2": "tsx scripts/deploy-with-create2.ts",
     "upgrade": "hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia"
+    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia",
+    "verify:info": "tsx scripts/verify-contracts.ts",
+    "verify:zeroG": "hardhat verify --network zeroG"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,7 @@
     "@nomicfoundation/hardhat-ethers": "^4.0.1",
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^3.0.4",
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
     "@types/node": "^22.18.8",
     "ethers": "^6.15.0",
