@@ -11,12 +11,8 @@
     "deploy": "hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
     "deploy:upgradeable": "hardhat run scripts/deploy-upgradeable.ts --network localhost",
     "deploy:upgradeable:sepolia": "hardhat run scripts/deploy-upgradeable.ts --network sepolia",
-    "deploy:create2": "tsx scripts/deploy-with-create2.ts",
     "upgrade": "hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia",
-    "verify:info": "tsx scripts/verify-contracts.ts",
-    "verify:implementations": "tsx scripts/verify-all-implementations.ts",
-    "verify:proxies": "tsx scripts/verify-proxies.ts"
+    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia"
   },
   "keywords": [],
   "author": "",
