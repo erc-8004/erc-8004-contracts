@@ -37,21 +37,29 @@ const config: HardhatUserConfig = {
       default: {
         version: "0.8.28",
         settings: {
+          evmVersion: "cancun",
           optimizer: {
             enabled: true,
             runs: 200,
           },
           viaIR: true,
+          metadata: {
+            bytecodeHash: "none",
+          },
         },
       },
       production: {
         version: "0.8.28",
         settings: {
+          evmVersion: "cancun",
           optimizer: {
             enabled: true,
             runs: 200,
           },
           viaIR: true,
+          metadata: {
+            bytecodeHash: "none",
+          },
         },
       },
     },

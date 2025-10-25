@@ -15,7 +15,8 @@
     "upgrade": "hardhat run scripts/upgrade-contracts.ts --network localhost",
     "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia",
     "verify:info": "tsx scripts/verify-contracts.ts",
-    "verify:zeroG": "hardhat verify --network zeroG"
+    "verify:implementations": "tsx scripts/verify-all-implementations.ts",
+    "verify:proxies": "tsx scripts/verify-proxies.ts"
   },
   "keywords": [],
   "author": "",
