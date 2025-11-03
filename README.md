@@ -34,6 +34,11 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **ReputationRegistry**: `0x8004b490779A65D3290a31fD96471122050dF671`
 - **ValidationRegistry**: `0x8004C86198fdB8d8169c0405D510EC86cc7B0551`
 
+#### SKALE Base Sepolia Testnet
+- **IdentityRegistry**: `0x4fa7900596c9830664406d3796952c59ec4133d9`
+- **ReputationRegistry**: `0x9b9d23a47697691ef1016906d1f8ddfc009e6a69`
+- **ValidationRegistry**: `0x34ae1196b1609e01ebc90b75c802b2ea87203f13`
+
 ## About
 
 This project implements **ERC-8004**, a protocol that enables discovering, choosing, and interacting with agents across organizational boundaries without pre-existing trust. It provides three core registries:
