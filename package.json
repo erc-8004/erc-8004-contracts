@@ -11,8 +11,17 @@
     "deploy": "npx hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
     "deploy:upgradeable": "npx hardhat run scripts/deploy-upgradeable.ts --network localhost",
     "deploy:upgradeable:sepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network sepolia",
+    "deploy:upgradeable:baseSepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network baseSepolia",
+    "deploy:upgradeable:lineaSepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network lineaSepolia",
+    "deploy:upgradeable:amoySepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network amoySepolia",
+    "deploy:upgradeable:hyperliquidTestnet": "npx hardhat run scripts/deploy-upgradeable-hyperliquid.ts --network hyperliquidTestnet",
+    "deploy:upgradeable:skaleBaseSepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network skaleBaseSepolia",
     "upgrade": "npx hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "npx hardhat run scripts/upgrade-contracts.ts --network sepolia"
+    "upgrade:sepolia": "npx hardhat run scripts/upgrade-contracts.ts --network sepolia",
+    "upgrade:baseSepolia": "npx hardhat run scripts/upgrade-contracts.ts --network baseSepolia",
+    "upgrade:lineaSepolia": "npx hardhat run scripts/upgrade-contracts.ts --network lineaSepolia",
+    "upgrade:amoySepolia": "npx hardhat run scripts/upgrade-contracts.ts --network amoySepolia",
+    "upgrade:skaleBaseSepolia": "npx hardhat run scripts/upgrade-contracts.ts --network skaleBaseSepolia"
   },
   "keywords": [],
   "author": "",

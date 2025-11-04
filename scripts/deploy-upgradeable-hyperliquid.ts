@@ -41,23 +41,21 @@ function findVanitySalt(
 }
 
 /**
- * Deploy script for ERC-8004 upgradeable contracts using UUPS proxy pattern with CREATE2 vanity addresses
+ * Deploy script for ERC-8004 upgradeable contracts on Hyperliquid EVM Testnet using UUPS proxy pattern with CREATE2 vanity addresses
  */
 async function main() {
   const { viem } = await hre.network.connect();
   const publicClient = await viem.getPublicClient();
   const [deployer] = await viem.getWalletClients();
 
-  console.log("Deploying ERC-8004 Upgradeable Contracts");
-  console.log("========================================");
+  console.log("Deploying ERC-8004 Upgradeable Contracts (Hyperliquid Testnet)");
+  console.log("==============================================================");
   console.log("Deployer address:", deployer.account.address);
   console.log("");
 
   // Step 0: Deploy CREATE2 Factory
   console.log("0. Deploying CREATE2 Factory...");
-  const factory = await viem.deployContract("Create2Factory", [], {
-    gas: 500000n,
-  });
+  const factory = await viem.deployContract("Create2Factory", []);
   console.log("   Factory deployed at:", factory.address);
   console.log("   Waiting 3 seconds...");
   await sleep(3000);
@@ -65,9 +63,7 @@ async function main() {
 
   // Step 1: Deploy IdentityRegistry Implementation
   console.log("1. Deploying IdentityRegistry implementation...");
-  const identityRegistryImpl = await viem.deployContract("IdentityRegistryUpgradeable", [], {
-    gas: 15000000n,
-  });
+  const identityRegistryImpl = await viem.deployContract("IdentityRegistryUpgradeable", []);
   console.log("   Implementation deployed at:", identityRegistryImpl.address);
   console.log("   Waiting 3 seconds...");
   await sleep(3000);
@@ -120,9 +116,7 @@ async function main() {
 
   // Step 3: Deploy ReputationRegistry Implementation
   console.log("3. Deploying ReputationRegistry implementation...");
-  const reputationRegistryImpl = await viem.deployContract("ReputationRegistryUpgradeable", [], {
-    gas: 15000000n,
-  });
+  const reputationRegistryImpl = await viem.deployContract("ReputationRegistryUpgradeable", []);
   console.log("   Implementation deployed at:", reputationRegistryImpl.address);
   console.log("   Waiting 3 seconds...");
   await sleep(3000);
@@ -175,9 +169,7 @@ async function main() {
 
   // Step 5: Deploy ValidationRegistry Implementation
   console.log("5. Deploying ValidationRegistry implementation...");
-  const validationRegistryImpl = await viem.deployContract("ValidationRegistryUpgradeable", [], {
-    gas: 15000000n,
-  });
+  const validationRegistryImpl = await viem.deployContract("ValidationRegistryUpgradeable", []);
   console.log("   Implementation deployed at:", validationRegistryImpl.address);
   console.log("   Waiting 3 seconds...");
   await sleep(3000);
