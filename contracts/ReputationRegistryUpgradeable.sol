@@ -4,9 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 interface IIdentityRegistry {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -15,8 +12,6 @@ interface IIdentityRegistry {
 }
 
 contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-    using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     address private identityRegistry;
 
@@ -24,8 +19,9 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         uint256 indexed agentId,
         address indexed clientAddress,
         uint8 score,
-        bytes32 indexed tag1,
-        bytes32 tag2,
+        string indexed indexedTag1,
+        string tag1,
+        string tag2,
         string feedbackUri,
         bytes32 feedbackHash
     );
@@ -47,19 +43,9 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
 
     struct Feedback {
         uint8 score;
-        bytes32 tag1;
-        bytes32 tag2;
+        string tag1;
+        string tag2;
         bool isRevoked;
-    }
-
-    struct FeedbackAuth {
-        uint256 agentId;
-        address clientAddress;
-        uint64 indexLimit;
-        uint256 expiry;
-        uint256 chainId;
-        address identityRegistry;
-        address signerAddress;
     }
 
     // agentId => clientAddress => feedbackIndex => Feedback (1-indexed)
@@ -98,11 +84,10 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function giveFeedback(
         uint256 agentId,
         uint8 score,
-        bytes32 tag1,
-        bytes32 tag2,
+        string calldata tag1,
+        string calldata tag2,
         string calldata feedbackUri,
-        bytes32 feedbackHash,
-        bytes calldata feedbackAuth
+        bytes32 feedbackHash
     ) external {
         require(score <= 100, "score>100");
 
@@ -120,9 +105,6 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             registry.getApproved(agentId) != msg.sender,
             "Self-feedback not allowed"
         );
-
-        // Verify feedbackAuth signature
-        _verifyFeedbackAuth(agentId, msg.sender, feedbackAuth);
 
         // Get current index for this client-agent pair (1-indexed)
         uint64 currentIndex = _lastIndex[agentId][msg.sender] + 1;
@@ -144,82 +126,7 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             _clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, feedbackUri, feedbackHash);
-    }
-
-    function _verifyFeedbackAuth(
-        uint256 agentId,
-        address clientAddress,
-        bytes calldata feedbackAuth
-    ) internal view {
-        require(
-            IIdentityRegistry(identityRegistry).ownerOf(agentId) != address(0),
-            "Unregistered agent"
-        );
-        require(feedbackAuth.length >= 289, "Invalid auth length");
-
-        // Decode the first 224 bytes into struct
-        FeedbackAuth memory auth;
-        (
-            auth.agentId,
-            auth.clientAddress,
-            auth.indexLimit,
-            auth.expiry,
-            auth.chainId,
-            auth.identityRegistry,
-            auth.signerAddress
-        ) = abi.decode(feedbackAuth[:224], (uint256, address, uint64, uint256, uint256, address, address));
-
-        // Verify parameters
-        require(auth.agentId == agentId, "AgentId mismatch");
-        require(auth.clientAddress == clientAddress, "Client mismatch");
-        require(block.timestamp < auth.expiry, "Auth expired");
-        require(auth.chainId == block.chainid, "ChainId mismatch");
-        require(auth.identityRegistry == identityRegistry, "Registry mismatch");
-        require(auth.indexLimit >= _lastIndex[agentId][clientAddress] + 1, "IndexLimit exceeded");
-
-        // Verify signature
-        _verifySignature(auth, feedbackAuth[224:]);
-    }
-
-    function _verifySignature(
-        FeedbackAuth memory auth,
-        bytes calldata signature
-    ) internal view {
-        // Construct message hash
-        bytes32 messageHash = keccak256(
-            abi.encode(
-                auth.agentId,
-                auth.clientAddress,
-                auth.indexLimit,
-                auth.expiry,
-                auth.chainId,
-                auth.identityRegistry,
-                auth.signerAddress
-            )
-        ).toEthSignedMessageHash();
-
-        // verify signature: EOA or ERC-1271 contract
-        address recoveredSigner = messageHash.recover(signature);
-        if (recoveredSigner != auth.signerAddress) {
-            if (auth.signerAddress.code.length == 0) {
-                revert("Invalid signature");
-            }
-            require(
-                IERC1271(auth.signerAddress).isValidSignature(messageHash, signature) == IERC1271.isValidSignature.selector,
-                "Bad 1271 signature"
-            );
-        }
-
-        // Verify signerAddress is owner or operator
-        IIdentityRegistry registry = IIdentityRegistry(identityRegistry);
-        address owner = registry.ownerOf(auth.agentId);
-        require(
-            auth.signerAddress == owner ||
-            registry.isApprovedForAll(owner, auth.signerAddress) ||
-            registry.getApproved(auth.agentId) == auth.signerAddress,
-            "Signer not authorized"
-        );
+        emit NewFeedback(agentId, msg.sender, score, tag1, tag1, tag2, feedbackUri, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
@@ -261,7 +168,7 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function readFeedback(uint256 agentId, address clientAddress, uint64 index)
         external
         view
-        returns (uint8 score, bytes32 tag1, bytes32 tag2, bool isRevoked)
+        returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
     {
         require(index > 0, "index must be > 0");
         require(index <= _lastIndex[agentId][clientAddress], "index out of bounds");
@@ -272,8 +179,8 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function getSummary(
         uint256 agentId,
         address[] calldata clientAddresses,
-        bytes32 tag1,
-        bytes32 tag2
+        string calldata tag1,
+        string calldata tag2
     ) external view returns (uint64 count, uint8 averageScore) {
         address[] memory clientList;
         if (clientAddresses.length > 0) {
@@ -290,8 +197,8 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (tag1 != bytes32(0) && fb.tag1 != tag1) continue;
-                if (tag2 != bytes32(0) && fb.tag2 != tag2) continue;
+                if (bytes(tag1).length > 0 && keccak256(bytes(fb.tag1)) != keccak256(bytes(tag1))) continue;
+                if (bytes(tag2).length > 0 && keccak256(bytes(fb.tag2)) != keccak256(bytes(tag2))) continue;
 
                 totalScore += fb.score;
                 count++;
@@ -304,14 +211,14 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function readAllFeedback(
         uint256 agentId,
         address[] calldata clientAddresses,
-        bytes32 tag1,
-        bytes32 tag2,
+        string calldata tag1,
+        string calldata tag2,
         bool includeRevoked
     ) external view returns (
         address[] memory clients,
         uint8[] memory scores,
-        bytes32[] memory tag1s,
-        bytes32[] memory tag2s,
+        string[] memory tag1s,
+        string[] memory tag2s,
         bool[] memory revokedStatuses
     ) {
         address[] memory clientList;
@@ -328,8 +235,8 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (tag1 != bytes32(0) && fb.tag1 != tag1) continue;
-                if (tag2 != bytes32(0) && fb.tag2 != tag2) continue;
+                if (bytes(tag1).length > 0 && keccak256(bytes(fb.tag1)) != keccak256(bytes(tag1))) continue;
+                if (bytes(tag2).length > 0 && keccak256(bytes(fb.tag2)) != keccak256(bytes(tag2))) continue;
                 totalCount++;
             }
         }
@@ -337,8 +244,8 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         // Initialize arrays
         clients = new address[](totalCount);
         scores = new uint8[](totalCount);
-        tag1s = new bytes32[](totalCount);
-        tag2s = new bytes32[](totalCount);
+        tag1s = new string[](totalCount);
+        tag2s = new string[](totalCount);
         revokedStatuses = new bool[](totalCount);
 
         // Second pass: populate arrays
@@ -348,8 +255,8 @@ contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (tag1 != bytes32(0) && fb.tag1 != tag1) continue;
-                if (tag2 != bytes32(0) && fb.tag2 != tag2) continue;
+                if (bytes(tag1).length > 0 && keccak256(bytes(fb.tag1)) != keccak256(bytes(tag1))) continue;
+                if (bytes(tag2).length > 0 && keccak256(bytes(fb.tag2)) != keccak256(bytes(tag2))) continue;
 
                 clients[idx] = clientList[i];
                 scores[idx] = fb.score;
