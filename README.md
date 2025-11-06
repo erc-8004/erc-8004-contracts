@@ -37,6 +37,11 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **ReputationRegistry**: [`0x80045d7b72c47bf5ff73737b780cb1a5ba8ee202`](https://chainscan-galileo.0g.ai/address/0x80045d7b72c47bf5ff73737b780cb1a5ba8ee202)
 - **ValidationRegistry**: [`0x80041728e0aadf1d1427f9be18d52b7f3afefafb`](https://chainscan-galileo.0g.ai/address/0x80041728e0aadf1d1427f9be18d52b7f3afefafb)
 
+#### 0G Galileo Testnet
+- **IdentityRegistry**: `0x80043ed9cf33a3472768dcd53175bb44e03a1e4a`
+- **ReputationRegistry**: `0x80045d7b72c47bf5ff73737b780cb1a5ba8ee202`
+- **ValidationRegistry**: `0x80041728e0aadf1d1427f9be18d52b7f3afefafb`
+
 ## About
 
 This project implements **ERC-8004**, a protocol that enables discovering, choosing, and interacting with agents across organizational boundaries without pre-existing trust. It provides three core registries:
