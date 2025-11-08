@@ -2,9 +2,28 @@ import hre from "hardhat";
 import { getCreate2Address, keccak256, encodeAbiParameters } from "viem";
 
 /**
+ * SAFE Singleton CREATE2 Factory address
+ * This factory must be deployed before upgradeable contracts can be deployed
+ */
+const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
+
+/**
+ * Checks if the SAFE singleton CREATE2 factory is deployed on the current network
+ * @param publicClient - Viem public client instance
+ * @returns true if factory is deployed, false otherwise
+ */
+async function checkCreate2FactoryDeployed(publicClient: any): Promise<boolean> {
+  const code = await publicClient.getBytecode({
+    address: SAFE_SINGLETON_FACTORY,
+  });
+  return code !== undefined && code !== "0x";
+}
+
+/**
  * Deploy script for ERC-8004 upgradeable contracts using UUPS proxy pattern
  *
  * This script:
+ * 0. Checks if SAFE singleton CREATE2 factory is deployed
  * 1. Deploys implementation contracts for all three registries
  * 2. Deploys ERC1967Proxy for each implementation
  * 3. Initializes each proxy with appropriate parameters
@@ -18,6 +37,24 @@ async function main() {
   console.log("Deploying ERC-8004 Upgradeable Contracts");
   console.log("========================================");
   console.log("Deployer address:", deployer.account.address);
+  console.log("");
+
+  // Step 0: Check if SAFE singleton CREATE2 factory is deployed
+  console.log("0. Checking for SAFE singleton CREATE2 factory...");
+  const isFactoryDeployed = await checkCreate2FactoryDeployed(publicClient);
+
+  if (!isFactoryDeployed) {
+    console.error("❌ ERROR: SAFE singleton CREATE2 factory not found!");
+    console.error(`   Expected address: ${SAFE_SINGLETON_FACTORY}`);
+    console.error("");
+    console.error("The CREATE2 factory must be deployed before deploying upgradeable contracts.");
+    console.error("Please run the factory deployment script first:");
+    console.error("   npx hardhat run scripts/deploy-create2-factory.ts --network <network>");
+    console.error("");
+    throw new Error("SAFE singleton CREATE2 factory not deployed");
+  }
+
+  console.log(`   ✅ Factory found at: ${SAFE_SINGLETON_FACTORY}`);
   console.log("");
 
   // Step 1: Deploy IdentityRegistry Implementation
