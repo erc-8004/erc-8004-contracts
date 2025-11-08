@@ -119,7 +119,7 @@ describe("ERC8004 Registries", async function () {
       const agentId = await getAgentIdFromRegistration(txHash);
 
       const key = "agentWallet";
-      const value = toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7");
+      const value = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7";
 
       // Set metadata
       await viem.assertions.emitWithArgs(
@@ -144,7 +144,7 @@ describe("ERC8004 Registries", async function () {
       // Try to set metadata as non-owner
       await assert.rejects(
         identityRegistry.write.setMetadata(
-          [agentId, "key", toHex("value")],
+          [agentId, "key", "value"],
           { account: attacker.account }
         )
       );
@@ -156,8 +156,8 @@ describe("ERC8004 Registries", async function () {
 
       const tokenURI = "ipfs://agent-with-metadata";
       const metadata = [
-        { metadataKey: "agentWallet", metadataValue: toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7") },
-        { metadataKey: "agentName", metadataValue: toHex("MyAgent") }
+        { metadataKey: "agentWallet", metadataValue: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7" },
+        { metadataKey: "agentName", metadataValue: "MyAgent" }
       ];
 
       const txHash = await identityRegistry.write.register([tokenURI, metadata]);

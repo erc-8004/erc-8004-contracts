@@ -15,15 +15,15 @@ contract IdentityRegistryUpgradeable is
     uint256 private _lastId;
 
     // agentId => key => value
-    mapping(uint256 => mapping(string => bytes)) private _metadata;
+    mapping(uint256 => mapping(string => string)) private _metadata;
 
     struct MetadataEntry {
         string metadataKey;
-        bytes metadataValue;
+        string metadataValue;
     }
 
     event Registered(uint256 indexed agentId, string tokenURI, address indexed owner);
-    event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
+    event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, string metadataValue);
     event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -64,11 +64,11 @@ contract IdentityRegistryUpgradeable is
         }
     }
 
-    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory) {
+    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (string memory) {
         return _metadata[agentId][metadataKey];
     }
 
-    function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
+    function setMetadata(uint256 agentId, string memory metadataKey, string memory metadataValue) external {
         require(
             msg.sender == _ownerOf(agentId) ||
             isApprovedForAll(_ownerOf(agentId), msg.sender) ||
