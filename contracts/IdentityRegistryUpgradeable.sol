@@ -25,7 +25,7 @@ contract IdentityRegistryUpgradeable is
         string metadataValue;
     }
 
-    event Registered(uint256 indexed agentId, string tokenURI, address indexed owner);
+    event Registered(uint256 indexed agentId, string agentURI, address indexed owner);
     event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, string metadataValue);
     event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy);
 
