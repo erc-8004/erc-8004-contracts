@@ -34,6 +34,11 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **ReputationRegistry**: `0x8004b490779A65D3290a31fD96471122050dF671`
 - **ValidationRegistry**: `0x8004C86198fdB8d8169c0405D510EC86cc7B0551`
 
+#### SKALE Base Sepolia Testnet
+- **IdentityRegistry**: `0x4fa7900596c9830664406d3796952c59ec4133d9`
+- **ReputationRegistry**: `0x9b9d23a47697691ef1016906d1f8ddfc009e6a69`
+- **ValidationRegistry**: `0x34ae1196b1609e01ebc90b75c802b2ea87203f13`
+
 #### Taiko Hoodi Testnet
 - **IdentityRegistry**: `0x5806074a60dc9325256b23062c006637ab6d5382`
 - **ReputationRegistry**: `0x59f8f15002d586a0912225d3437da46ba5641f61`
