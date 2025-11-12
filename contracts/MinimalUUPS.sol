@@ -10,14 +10,17 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  * This allows proxies to be deployed with vanity addresses before the real implementation is ready
  */
 contract MinimalUUPS is OwnableUpgradeable, UUPSUpgradeable {
+    address private identityRegistry;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize() public initializer {
+    function initialize(address _identityRegistry) public initializer {
         __Ownable_init(address(0x547289319C3e6aedB179C0b8e8aF0B5ACd062603));
         __UUPSUpgradeable_init();
+        identityRegistry = _identityRegistry;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

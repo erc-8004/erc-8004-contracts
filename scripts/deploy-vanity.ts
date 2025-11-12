@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { encodeAbiParameters, encodeFunctionData, Hex } from "viem";
+import { encodeAbiParameters, encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
 import dotenv from "dotenv";
 
 // Load environment variables from .env file
@@ -13,25 +13,34 @@ const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as c
 /**
  * MinimalUUPS address (deployed via CREATE2 with salt 0x01)
  */
-const MINIMAL_UUPS_ADDRESS = "0xB0324bB5D23481009EfdDbD1fA8B5544FBeae60d" as const;
+const MINIMAL_UUPS_ADDRESS = "0xF8AD590D320f6b5b43A11033cFdFC3eB588Fbf4a" as const;
 const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
 
 /**
  * Vanity salts for proxies (pointing to MinimalUUPS initially)
  */
 const VANITY_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000087efe" as Hex,
-  reputationRegistry: "0x000000000000000000000000000000000000000000000000000000000007ccdf" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000a8a957" as Hex,
+  identityRegistry: "0x000000000000000000000000000000000000000000000000000000000008bc6f" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000b93e81" as Hex,
+  validationRegistry: "0x00000000000000000000000000000000000000000000000000000000001b4463" as Hex,
+} as const;
+
+/**
+ * Salts for implementation contracts (deployed via CREATE2)
+ */
+const IMPLEMENTATION_SALTS = {
+  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000002" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000003" as Hex,
+  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000004" as Hex,
 } as const;
 
 /**
  * Expected vanity proxy addresses
  */
 const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004AE1BF83F0BC514De8A3DFFcc6754622D50b8",
-  reputationRegistry: "0x8004BE768f4C976fBB0D739532bf46af3Cd71e5D",
-  validationRegistry: "0x8004CFa3dCe1D992E0C2dC297DA8C6d2FD238741",
+  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997",
+  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876",
+  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3",
 } as const;
 
 /**
@@ -77,35 +86,9 @@ async function main() {
   const publicClient = await viem.getPublicClient();
   const [deployer] = await viem.getWalletClients();
 
-  // Get owner wallet from environment variable
-  let ownerPrivateKey = process.env.OWNER_PRIVATE_KEY;
-  if (!ownerPrivateKey) {
-    throw new Error("OWNER_PRIVATE_KEY not found in environment variables");
-  }
-
-  // Ensure private key starts with 0x
-  if (!ownerPrivateKey.startsWith("0x")) {
-    ownerPrivateKey = `0x${ownerPrivateKey}`;
-  }
-
-  // Validate private key format (should be 66 characters: 0x + 64 hex chars)
-  if (ownerPrivateKey.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(ownerPrivateKey)) {
-    throw new Error(`Invalid OWNER_PRIVATE_KEY format. Expected 0x followed by 64 hex characters, got: ${ownerPrivateKey.length} characters`);
-  }
-
-  const { createWalletClient, http } = await import("viem");
-  const { privateKeyToAccount } = await import("viem/accounts");
-  const ownerAccount = privateKeyToAccount(ownerPrivateKey as any);
-  const ownerWallet = createWalletClient({
-    account: ownerAccount,
-    chain: (await viem.getPublicClient()).chain,
-    transport: http(),
-  });
-
-  console.log("Deploying ERC-8004 Contracts with Vanity Addresses");
-  console.log("==================================================");
+  console.log("Deploying ERC-8004 Contracts with Vanity Addresses (Deployer Phase)");
+  console.log("=====================================================================");
   console.log("Deployer address:", deployer.account.address);
-  console.log("Owner address:", ownerAccount.address);
   console.log("");
 
   // Step 0: Check if SAFE singleton CREATE2 factory is deployed
@@ -163,17 +146,10 @@ async function main() {
   console.log("==================================");
   console.log("");
 
-  // Prepare initialize() call data for MinimalUUPS
+  // Get MinimalUUPS artifact for initialization
   const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
-  const initializeCallData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "initialize",
-    args: []
-  });
 
-  const proxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, initializeCallData);
-
-  // Deploy IdentityRegistry proxy
+  // Deploy IdentityRegistry proxy - initialize with zero address (doesn't need identityRegistry)
   const identityProxyAddress = EXPECTED_ADDRESSES.identityRegistry as `0x${string}`;
   const identityProxyCode = await publicClient.getBytecode({
     address: identityProxyAddress,
@@ -181,9 +157,15 @@ async function main() {
 
   if (!identityProxyCode || identityProxyCode === "0x") {
     console.log("2. Deploying IdentityRegistry proxy (0x8004A...)...");
+    const identityInitData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "initialize",
+      args: ["0x0000000000000000000000000000000000000000" as `0x${string}`]
+    });
+    const identityProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, identityInitData);
     const identityProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
-      data: (VANITY_SALTS.identityRegistry + proxyBytecode.slice(2)) as Hex,
+      data: (VANITY_SALTS.identityRegistry + identityProxyBytecode.slice(2)) as Hex,
     });
     await publicClient.waitForTransactionReceipt({ hash: identityProxyTxHash });
     console.log(`   ✅ Deployed at: ${identityProxyAddress}`);
@@ -193,7 +175,7 @@ async function main() {
   }
   console.log("");
 
-  // Deploy ReputationRegistry proxy
+  // Deploy ReputationRegistry proxy - initialize with identityRegistry address
   const reputationProxyAddress = EXPECTED_ADDRESSES.reputationRegistry as `0x${string}`;
   const reputationProxyCode = await publicClient.getBytecode({
     address: reputationProxyAddress,
@@ -201,9 +183,15 @@ async function main() {
 
   if (!reputationProxyCode || reputationProxyCode === "0x") {
     console.log("3. Deploying ReputationRegistry proxy (0x8004B...)...");
+    const reputationInitData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "initialize",
+      args: [identityProxyAddress]
+    });
+    const reputationProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, reputationInitData);
     const reputationProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
-      data: (VANITY_SALTS.reputationRegistry + proxyBytecode.slice(2)) as Hex,
+      data: (VANITY_SALTS.reputationRegistry + reputationProxyBytecode.slice(2)) as Hex,
     });
     await publicClient.waitForTransactionReceipt({ hash: reputationProxyTxHash });
     console.log(`   ✅ Deployed at: ${reputationProxyAddress}`);
@@ -213,7 +201,7 @@ async function main() {
   }
   console.log("");
 
-  // Deploy ValidationRegistry proxy
+  // Deploy ValidationRegistry proxy - initialize with identityRegistry address
   const validationProxyAddress = EXPECTED_ADDRESSES.validationRegistry as `0x${string}`;
   const validationProxyCode = await publicClient.getBytecode({
     address: validationProxyAddress,
@@ -221,9 +209,15 @@ async function main() {
 
   if (!validationProxyCode || validationProxyCode === "0x") {
     console.log("4. Deploying ValidationRegistry proxy (0x8004C...)...");
+    const validationInitData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "initialize",
+      args: [identityProxyAddress]
+    });
+    const validationProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, validationInitData);
     const validationProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
-      data: (VANITY_SALTS.validationRegistry + proxyBytecode.slice(2)) as Hex,
+      data: (VANITY_SALTS.validationRegistry + validationProxyBytecode.slice(2)) as Hex,
     });
     await publicClient.waitForTransactionReceipt({ hash: validationProxyTxHash });
     console.log(`   ✅ Deployed at: ${validationProxyAddress}`);
@@ -234,131 +228,103 @@ async function main() {
   console.log("");
 
   // ============================================================================
-  // PHASE 3: Deploy implementation contracts
+  // PHASE 3: Deploy implementation contracts via CREATE2
   // ============================================================================
 
-  console.log("PHASE 3: Deploying Implementation Contracts");
-  console.log("============================================");
+  console.log("PHASE 3: Deploying Implementation Contracts via CREATE2");
+  console.log("========================================================");
   console.log("");
 
-  console.log("5. Deploying IdentityRegistry implementation...");
-  const identityRegistryImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-  console.log(`   ✅ Deployed at: ${identityRegistryImpl.address}`);
+  // Deploy IdentityRegistry implementation via CREATE2
+  console.log("5. Deploying IdentityRegistry implementation via CREATE2...");
+  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
+  const identityImplBytecode = identityImplArtifact.bytecode as Hex;
+  const identityImplDeployData = (IMPLEMENTATION_SALTS.identityRegistry + identityImplBytecode.slice(2)) as Hex;
+
+  // Calculate the CREATE2 address
+  const identityRegistryImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.identityRegistry,
+    bytecodeHash: keccak256(identityImplBytecode),
+  });
+
+  // Check if already deployed
+  const identityImplCode = await publicClient.getBytecode({ address: identityRegistryImplAddress });
+
+  if (!identityImplCode || identityImplCode === "0x") {
+    const identityImplTxHash = await deployer.sendTransaction({
+      to: SAFE_SINGLETON_FACTORY,
+      data: identityImplDeployData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: identityImplTxHash });
+    console.log(`   ✅ Deployed at: ${identityRegistryImplAddress}`);
+  } else {
+    console.log(`   ✅ Already deployed at: ${identityRegistryImplAddress}`);
+  }
   console.log("");
 
-  console.log("6. Deploying ReputationRegistry implementation...");
-  const reputationRegistryImpl = await viem.deployContract("ReputationRegistryUpgradeable");
-  console.log(`   ✅ Deployed at: ${reputationRegistryImpl.address}`);
+  // Deploy ReputationRegistry implementation via CREATE2
+  console.log("6. Deploying ReputationRegistry implementation via CREATE2...");
+  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
+  const reputationImplBytecode = reputationImplArtifact.bytecode as Hex;
+  const reputationImplDeployData = (IMPLEMENTATION_SALTS.reputationRegistry + reputationImplBytecode.slice(2)) as Hex;
+
+  // Calculate the CREATE2 address
+  const reputationRegistryImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.reputationRegistry,
+    bytecodeHash: keccak256(reputationImplBytecode),
+  });
+
+  // Check if already deployed
+  const reputationImplCode = await publicClient.getBytecode({ address: reputationRegistryImplAddress });
+
+  if (!reputationImplCode || reputationImplCode === "0x") {
+    const reputationImplTxHash = await deployer.sendTransaction({
+      to: SAFE_SINGLETON_FACTORY,
+      data: reputationImplDeployData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: reputationImplTxHash });
+    console.log(`   ✅ Deployed at: ${reputationRegistryImplAddress}`);
+  } else {
+    console.log(`   ✅ Already deployed at: ${reputationRegistryImplAddress}`);
+  }
   console.log("");
 
-  console.log("7. Deploying ValidationRegistry implementation...");
-  const validationRegistryImpl = await viem.deployContract("ValidationRegistryUpgradeable");
-  console.log(`   ✅ Deployed at: ${validationRegistryImpl.address}`);
+  // Deploy ValidationRegistry implementation via CREATE2
+  console.log("7. Deploying ValidationRegistry implementation via CREATE2...");
+  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
+  const validationImplBytecode = validationImplArtifact.bytecode as Hex;
+  const validationImplDeployData = (IMPLEMENTATION_SALTS.validationRegistry + validationImplBytecode.slice(2)) as Hex;
+
+  // Calculate the CREATE2 address
+  const validationRegistryImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.validationRegistry,
+    bytecodeHash: keccak256(validationImplBytecode),
+  });
+
+  // Check if already deployed
+  const validationImplCode = await publicClient.getBytecode({ address: validationRegistryImplAddress });
+
+  if (!validationImplCode || validationImplCode === "0x") {
+    const validationImplTxHash = await deployer.sendTransaction({
+      to: SAFE_SINGLETON_FACTORY,
+      data: validationImplDeployData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: validationImplTxHash });
+    console.log(`   ✅ Deployed at: ${validationRegistryImplAddress}`);
+  } else {
+    console.log(`   ✅ Already deployed at: ${validationRegistryImplAddress}`);
+  }
   console.log("");
 
   console.log("=".repeat(80));
-  console.log("DEPLOYER PHASE COMPLETE");
+  console.log("DEPLOYMENT COMPLETE");
   console.log("=".repeat(80));
   console.log("");
   console.log("✅ All contracts deployed by deployer");
   console.log("✅ Proxies are initialized with MinimalUUPS (owner is set)");
-  console.log("");
-  console.log("⚠️  NEXT STEP: Owner must upgrade the 3 proxies (3 transactions)");
-  console.log("");
-  console.log("To upgrade, the owner needs to call upgradeToAndCall() on each proxy:");
-  console.log(`  1. IdentityRegistry:   ${identityProxyAddress}`);
-  console.log(`     -> New implementation: ${identityRegistryImpl.address}`);
-  console.log(`  2. ReputationRegistry: ${reputationProxyAddress}`);
-  console.log(`     -> New implementation: ${reputationRegistryImpl.address}`);
-  console.log(`  3. ValidationRegistry: ${validationProxyAddress}`);
-  console.log(`     -> New implementation: ${validationRegistryImpl.address}`);
-  console.log("");
-  console.log("After upgrades, run this script again to set identity registry references.");
-  console.log("");
-
-  // ============================================================================
-  // PHASE 4: Owner upgrades (to be done externally or in separate step)
-  // ============================================================================
-
-  console.log("PHASE 4: Owner Upgrades (REQUIRES OWNER WALLET)");
-  console.log("================================================");
-  console.log("");
-
-  // Get implementation ABIs
-  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
-  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
-  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
-
-  // Upgrade IdentityRegistry proxy with initialize()
-  console.log("8. Upgrading IdentityRegistry proxy to final implementation...");
-  const identityInitData = encodeFunctionData({
-    abi: identityImplArtifact.abi,
-    functionName: "initialize",
-    args: []
-  });
-  const identityUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [identityRegistryImpl.address, identityInitData]
-  });
-  const identityUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: identityProxyAddress,
-    data: identityUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: identityUpgradeTxHash });
-  console.log("   ✅ Upgraded");
-  console.log("");
-
-  // Upgrade ReputationRegistry proxy with initialize(identityRegistry)
-  console.log("9. Upgrading ReputationRegistry proxy...");
-  const reputationInitData = encodeFunctionData({
-    abi: reputationImplArtifact.abi,
-    functionName: "initialize",
-    args: [identityProxyAddress]
-  });
-  const reputationUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [reputationRegistryImpl.address, reputationInitData]
-  });
-  const reputationUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: reputationProxyAddress,
-    data: reputationUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: reputationUpgradeTxHash });
-  console.log("   ✅ Upgraded and initialized with IdentityRegistry");
-  console.log("");
-
-  // Upgrade ValidationRegistry proxy with initialize(identityRegistry)
-  console.log("10. Upgrading ValidationRegistry proxy...");
-  const validationInitData = encodeFunctionData({
-    abi: validationImplArtifact.abi,
-    functionName: "initialize",
-    args: [identityProxyAddress]
-  });
-  const validationUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [validationRegistryImpl.address, validationInitData]
-  });
-  const validationUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: validationProxyAddress,
-    data: validationUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: validationUpgradeTxHash });
-  console.log("   ✅ Upgraded and initialized with IdentityRegistry");
-  console.log("");
-
-  // ============================================================================
-  // Verification
-  // ============================================================================
-
-  console.log("Verifying Deployments");
-  console.log("=====================");
-  console.log("");
-  console.log("✅ All proxies deployed to vanity addresses");
-  console.log("✅ All implementations deployed");
-  console.log("✅ All proxies upgraded and initialized");
   console.log("");
 
   // ============================================================================
@@ -375,11 +341,19 @@ async function main() {
   console.log("  ValidationRegistry:  ", validationProxyAddress, "(0x8004C...)");
   console.log("");
   console.log("Implementation Addresses:");
-  console.log("  IdentityRegistry:    ", identityRegistryImpl.address);
-  console.log("  ReputationRegistry:  ", reputationRegistryImpl.address);
-  console.log("  ValidationRegistry:  ", validationRegistryImpl.address);
+  console.log("  IdentityRegistry:    ", identityRegistryImplAddress);
+  console.log("  ReputationRegistry:  ", reputationRegistryImplAddress);
+  console.log("  ValidationRegistry:  ", validationRegistryImplAddress);
   console.log("");
-  console.log("✅ All contracts deployed successfully with vanity addresses!");
+  console.log("=".repeat(80));
+  console.log("⚠️  NEXT STEPS");
+  console.log("=".repeat(80));
+  console.log("");
+  console.log("1. Owner must run upgrade script:");
+  console.log("   npm run upgrade:vanity -- --network <network>");
+  console.log("");
+  console.log("2. After upgrades, verify deployment:");
+  console.log("   npm run verify:vanity -- --network <network>");
   console.log("");
 
   return {
@@ -389,9 +363,9 @@ async function main() {
       validationRegistry: validationProxyAddress
     },
     implementations: {
-      identityRegistry: identityRegistryImpl.address,
-      reputationRegistry: reputationRegistryImpl.address,
-      validationRegistry: validationRegistryImpl.address
+      identityRegistry: identityRegistryImplAddress,
+      reputationRegistry: reputationRegistryImplAddress,
+      validationRegistry: validationRegistryImplAddress
     }
   };
 }

@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { getCreate2Address, encodeAbiParameters, Hex } from "viem";
+import { getCreate2Address, encodeAbiParameters, encodeFunctionData, keccak256, Hex } from "viem";
 import { Worker } from "worker_threads";
 import * as os from "os";
 import * as path from "path";
@@ -10,9 +10,9 @@ import * as path from "path";
 const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
 
 /**
- * MinimalUUPS address deployed via CREATE2 (deterministic)
+ * MinimalUUPS salt (will calculate address since bytecode changed)
  */
-const PLACEHOLDER_ADDRESS = "0xB0324bB5D23481009EfdDbD1fA8B5544FBeae60d" as const;
+const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
 
 /**
  * Gets the deployment bytecode for a proxy contract
@@ -55,7 +55,7 @@ function findVanitySaltParallel(
     // Create worker code as a string
     const workerCode = `
       const { parentPort, workerData } = require('worker_threads');
-      const { getCreate2Address } = require('viem');
+      const { getCreate2Address, keccak256 } = require('viem');
 
       const { startSalt, factoryAddress, bytecode, prefix, targetChar } = workerData;
 
@@ -77,7 +77,7 @@ function findVanitySaltParallel(
         const address = getCreate2Address({
           from: factoryAddress,
           salt: saltHex,
-          bytecode: bytecode,
+          bytecodeHash: keccak256(bytecode),
         });
 
         if (address.toLowerCase().startsWith(normalizedPrefix) && hasUppercase(address, targetChar)) {
@@ -156,28 +156,65 @@ async function main() {
   console.log(`System has ${numWorkers} CPU cores`);
   console.log("");
 
-  // All proxies initially point to placeholder address with empty init data
-  const emptyInitData = "0x" as Hex;
-
-  // Get proxy bytecode pointing to placeholder address
-  const proxyBytecode = await getProxyBytecode(PLACEHOLDER_ADDRESS, emptyInitData);
-
-  console.log(`Finding vanity salts for proxies pointing to ${PLACEHOLDER_ADDRESS}`);
+  // Calculate MinimalUUPS address (bytecode changed with new initialize signature)
+  console.log("Step 0: Calculating MinimalUUPS address...");
+  const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
+  const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
+  const minimalUUPSAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: MINIMAL_UUPS_SALT,
+    bytecodeHash: keccak256(minimalUUPSBytecode),
+  });
+  console.log(`✅ MinimalUUPS will be at: ${minimalUUPSAddress}`);
   console.log("");
 
   // Find salt for IdentityRegistry proxy (0x8004A)
-  console.log("1. Finding salt for IdentityRegistry (0x8004A)...");
-  const identityResult = await findVanitySaltParallel("0x8004a", proxyBytecode, "A", numWorkers);
+  // Initialize with zero address
+  console.log("Step 1: Finding salt for IdentityRegistry (0x8004A)...");
+  console.log("        Initialize with: 0x0000000000000000000000000000000000000000");
+  const identityInitData = encodeFunctionData({
+    abi: minimalUUPSArtifact.abi,
+    functionName: "initialize",
+    args: ["0x0000000000000000000000000000000000000000" as `0x${string}`]
+  });
+  const identityProxyBytecode = await getProxyBytecode(minimalUUPSAddress, identityInitData);
+  const identityResult = await findVanitySaltParallel("0x8004a", identityProxyBytecode, "A", numWorkers);
+  console.log("");
+
+  // Calculate IdentityRegistry proxy address
+  console.log("Step 2: Calculating IdentityRegistry proxy address...");
+  const identityProxyAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: identityResult.salt,
+    bytecodeHash: keccak256(identityProxyBytecode),
+  });
+  console.log(`✅ IdentityRegistry proxy will be at: ${identityProxyAddress}`);
   console.log("");
 
   // Find salt for ReputationRegistry proxy (0x8004B)
-  console.log("2. Finding salt for ReputationRegistry (0x8004B)...");
-  const reputationResult = await findVanitySaltParallel("0x8004b", proxyBytecode, "B", numWorkers);
+  // Initialize with IdentityRegistry address
+  console.log("Step 3: Finding salt for ReputationRegistry (0x8004B)...");
+  console.log(`        Initialize with: ${identityProxyAddress}`);
+  const reputationInitData = encodeFunctionData({
+    abi: minimalUUPSArtifact.abi,
+    functionName: "initialize",
+    args: [identityProxyAddress]
+  });
+  const reputationProxyBytecode = await getProxyBytecode(minimalUUPSAddress, reputationInitData);
+  const reputationResult = await findVanitySaltParallel("0x8004b", reputationProxyBytecode, "B", numWorkers);
   console.log("");
 
   // Find salt for ValidationRegistry proxy (0x8004C)
-  console.log("3. Finding salt for ValidationRegistry (0x8004C)...");
-  const validationResult = await findVanitySaltParallel("0x8004c", proxyBytecode, "C", numWorkers);
+  // Initialize with IdentityRegistry address
+  console.log("Step 4: Finding salt for ValidationRegistry (0x8004C)...");
+  console.log(`        Initialize with: ${identityProxyAddress}`);
+  const validationInitData = encodeFunctionData({
+    abi: minimalUUPSArtifact.abi,
+    functionName: "initialize",
+    args: [identityProxyAddress]
+  });
+  const validationProxyBytecode = await getProxyBytecode(minimalUUPSAddress, validationInitData);
+  const validationResult = await findVanitySaltParallel("0x8004c", validationProxyBytecode, "C", numWorkers);
   console.log("");
 
   // Summary
@@ -185,25 +222,29 @@ async function main() {
   console.log("Vanity Proxy Salts Found!");
   console.log("=".repeat(80));
   console.log("");
-  console.log("All proxies initially point to:", PLACEHOLDER_ADDRESS);
+  console.log("MinimalUUPS Address:", minimalUUPSAddress);
   console.log("");
   console.log("IdentityRegistry Proxy:");
   console.log("  Salt:    ", identityResult.salt);
   console.log("  Address: ", identityResult.address);
+  console.log("  Init:     MinimalUUPS.initialize(0x0000000000000000000000000000000000000000)");
   console.log("");
   console.log("ReputationRegistry Proxy:");
   console.log("  Salt:    ", reputationResult.salt);
   console.log("  Address: ", reputationResult.address);
+  console.log(`  Init:     MinimalUUPS.initialize(${identityProxyAddress})`);
   console.log("");
   console.log("ValidationRegistry Proxy:");
   console.log("  Salt:    ", validationResult.salt);
   console.log("  Address: ", validationResult.address);
+  console.log(`  Init:     MinimalUUPS.initialize(${identityProxyAddress})`);
   console.log("");
   console.log("=".repeat(80));
   console.log("Next steps:");
-  console.log("1. Deploy proxies with these salts (pointing to 0x...8004)");
-  console.log("2. Deploy implementation contracts");
-  console.log("3. Call upgradeToAndCall() on each proxy to point to implementations");
+  console.log("1. Update MINIMAL_UUPS_ADDRESS in scripts/deploy-vanity.ts");
+  console.log("2. Update VANITY_SALTS in scripts/deploy-vanity.ts");
+  console.log("3. Update EXPECTED_ADDRESSES in scripts/deploy-vanity.ts");
+  console.log("4. Update scripts/upgrade-vanity.ts and verify-vanity.ts with new addresses");
   console.log("");
 
   return {
