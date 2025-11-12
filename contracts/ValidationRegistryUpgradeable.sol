@@ -130,7 +130,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function getSummary(
         uint256 agentId,
         address[] calldata validatorAddresses,
-        bytes32 tag
+        string calldata tag
     ) external view returns (uint64 count, uint8 avgResponse) {
         uint256 totalResponse = 0;
         count = 0;
