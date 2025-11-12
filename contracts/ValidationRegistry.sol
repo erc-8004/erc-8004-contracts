@@ -26,7 +26,7 @@ contract ValidationRegistry {
         uint8 response,
         string responseUri,
         bytes32 responseHash,
-        bytes32 tag
+        string tag
     );
 
     struct ValidationStatus {
@@ -34,7 +34,7 @@ contract ValidationRegistry {
         uint256 agentId;
         uint8 response;       // 0..100
         bytes32 responseHash;
-        bytes32 tag;
+        string tag;
         uint256 lastUpdate;
     }
 
@@ -78,7 +78,7 @@ contract ValidationRegistry {
             agentId: agentId,
             response: 0,
             responseHash: bytes32(0),
-            tag: bytes32(0),
+            tag: "",
             lastUpdate: block.timestamp
         });
 
@@ -94,7 +94,7 @@ contract ValidationRegistry {
         uint8 response,
         string calldata responseUri,
         bytes32 responseHash,
-        bytes32 tag
+        string calldata tag
     ) external {
         ValidationStatus storage s = validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
@@ -110,7 +110,7 @@ contract ValidationRegistry {
     function getValidationStatus(bytes32 requestHash)
         external
         view
-        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, bytes32 tag, uint256 lastUpdate)
+        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
     {
         ValidationStatus memory s = validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
@@ -142,7 +142,7 @@ contract ValidationRegistry {
             }
 
             // Filter by tag (0x0 means no filter)
-            bool matchTag = (tag == bytes32(0)) || (s.tag == tag);
+            bool matchTag = (keccak256(abi.encodePacked(tag)) == keccak256(abi.encodePacked(""))) || (keccak256(abi.encodePacked(s.tag)) == keccak256(abi.encodePacked(tag)));
 
             if (matchValidator && matchTag && s.response >= 0) {
                 totalResponse += s.response;
