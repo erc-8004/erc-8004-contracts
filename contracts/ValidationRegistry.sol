@@ -36,6 +36,7 @@ contract ValidationRegistry {
         bytes32 responseHash;
         string tag;
         uint256 lastUpdate;
+        bool hasResponse;
     }
 
     // requestHash => validation status
@@ -79,7 +80,8 @@ contract ValidationRegistry {
             response: 0,
             responseHash: bytes32(0),
             tag: "",
-            lastUpdate: block.timestamp
+            lastUpdate: block.timestamp,
+            hasResponse: false
         });
 
         // Track for lookups
@@ -104,6 +106,7 @@ contract ValidationRegistry {
         s.responseHash = responseHash;
         s.tag = tag;
         s.lastUpdate = block.timestamp;
+        s.hasResponse = true;
         emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseUri, responseHash, tag);
     }
 
@@ -144,7 +147,7 @@ contract ValidationRegistry {
             // Filter by tag (0x0 means no filter)
             bool matchTag = (keccak256(abi.encodePacked(tag)) == keccak256(abi.encodePacked(""))) || (keccak256(abi.encodePacked(s.tag)) == keccak256(abi.encodePacked(tag)));
 
-            if (matchValidator && matchTag && s.response >= 0) {
+            if (matchValidator && matchTag && s.hasResponse) {
                 totalResponse += s.response;
                 count++;
             }
