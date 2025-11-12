@@ -19,7 +19,7 @@ const EXPECTED_OWNER = "0x547289319C3e6aedB179C0b8e8aF0B5ACd062603" as const;
  * This script checks that all contracts are properly deployed and configured
  */
 async function main() {
-  const { viem } = await hre.network.connect();
+  const { viem } = await hre.network.connect() as any;
   const publicClient = await viem.getPublicClient();
 
   console.log("Verifying ERC-8004 Vanity Deployment");
@@ -61,6 +61,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.reputationRegistry as `0x${string}`,
       abi: reputationArtifact.abi,
       functionName: "getVersion",
+      args: [],
     });
     console.log(`   ✅ ReputationRegistry version: ${reputationVersion}`);
 
@@ -68,6 +69,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.validationRegistry as `0x${string}`,
       abi: validationArtifact.abi,
       functionName: "getVersion",
+      args: [],
     });
     console.log(`   ✅ ValidationRegistry version: ${validationVersion}`);
   } catch (error) {
@@ -83,6 +85,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.identityRegistry as `0x${string}`,
       abi: identityArtifact.abi,
       functionName: "owner",
+      args: [],
     }) as `0x${string}`;
     if (identityOwner.toLowerCase() === EXPECTED_OWNER.toLowerCase()) {
       console.log(`   ✅ IdentityRegistry owner: ${identityOwner}`);
@@ -95,6 +98,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.reputationRegistry as `0x${string}`,
       abi: reputationArtifact.abi,
       functionName: "owner",
+      args: [],
     }) as `0x${string}`;
     if (reputationOwner.toLowerCase() === EXPECTED_OWNER.toLowerCase()) {
       console.log(`   ✅ ReputationRegistry owner: ${reputationOwner}`);
@@ -107,6 +111,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.validationRegistry as `0x${string}`,
       abi: validationArtifact.abi,
       functionName: "owner",
+      args: [],
     }) as `0x${string}`;
     if (validationOwner.toLowerCase() === EXPECTED_OWNER.toLowerCase()) {
       console.log(`   ✅ ValidationRegistry owner: ${validationOwner}`);
@@ -150,6 +155,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.reputationRegistry as `0x${string}`,
       abi: reputationArtifact.abi,
       functionName: "getIdentityRegistry",
+      args: [],
     }) as `0x${string}`;
     if (reputationIdentityRef.toLowerCase() === EXPECTED_ADDRESSES.identityRegistry.toLowerCase()) {
       console.log(`   ✅ ReputationRegistry -> IdentityRegistry: ${reputationIdentityRef}`);
@@ -164,6 +170,7 @@ async function main() {
       address: EXPECTED_ADDRESSES.validationRegistry as `0x${string}`,
       abi: validationArtifact.abi,
       functionName: "getIdentityRegistry",
+      args: [],
     }) as `0x${string}`;
     if (validationIdentityRef.toLowerCase() === EXPECTED_ADDRESSES.identityRegistry.toLowerCase()) {
       console.log(`   ✅ ValidationRegistry -> IdentityRegistry: ${validationIdentityRef}`);
