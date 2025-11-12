@@ -62,19 +62,19 @@ contract IdentityRegistryUpgradeable is
         }
     }
 
-    function getMetadata(uint256 agentId, string memory key) external view returns (string memory) {
-        return _metadata[agentId][key];
+    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (string memory) {
+        return _metadata[agentId][metadataKey];
     }
 
-    function setMetadata(uint256 agentId, string memory key, string memory value) external {
+    function setMetadata(uint256 agentId, string memory metadataKey, string memory metadataValue) external {
         require(
             msg.sender == _ownerOf(agentId) ||
             isApprovedForAll(_ownerOf(agentId), msg.sender) ||
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
-        _metadata[agentId][key] = value;
-        emit MetadataSet(agentId, key, key, value);
+        _metadata[agentId][metadataKey] = metadataValue;
+        emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
     }
 
     function setAgentUri(uint256 agentId, string calldata newUri) external {
