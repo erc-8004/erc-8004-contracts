@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -14,7 +13,7 @@ interface IIdentityRegistry {
     function getApproved(uint256 tokenId) external view returns (address);
 }
 
-contract ReputationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 

@@ -3,14 +3,13 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title MinimalUUPS
  * @dev Minimal UUPS implementation to use as placeholder for vanity proxy addresses
  * This allows proxies to be deployed with vanity addresses before the real implementation is ready
  */
-contract MinimalUUPS is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract MinimalUUPS is OwnableUpgradeable, UUPSUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

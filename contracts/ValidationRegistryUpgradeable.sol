@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -10,7 +9,7 @@ interface IIdentityRegistry {
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
-contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     address private identityRegistry;
 
     event ValidationRequest(

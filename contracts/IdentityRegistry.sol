@@ -62,10 +62,9 @@ contract IdentityRegistry is ERC721URIStorage, Ownable {
     }
 
     function setAgentUri(uint256 agentId, string calldata newUri) external {
-        address owner = ownerOf(agentId);
         require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
+            msg.sender == _ownerOf(agentId) ||
+            isApprovedForAll(_ownerOf(agentId), msg.sender) ||
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
