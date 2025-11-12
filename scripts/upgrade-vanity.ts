@@ -104,53 +104,92 @@ async function main() {
   // Proxies are already initialized by MinimalUUPS
   // Just upgrade them to real implementations (no need to reinitialize)
 
+  // Helper function to get current implementation
+  const getImplementation = async (proxyAddress: `0x${string}`) => {
+    const implSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+    return await publicClient.getStorageAt({
+      address: proxyAddress,
+      slot: implSlot as `0x${string}`,
+    });
+  };
+
   // Upgrade IdentityRegistry proxy
-  console.log("1. Upgrading IdentityRegistry proxy...");
-  const identityUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [identityImpl, "0x" as `0x${string}`]
-  });
-  const identityUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: identityProxyAddress,
-    data: identityUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: identityUpgradeTxHash });
-  console.log("   ✅ Upgraded to IdentityRegistryUpgradeable");
-  console.log(`   Transaction: ${identityUpgradeTxHash}`);
-  console.log("");
+  console.log("1. Checking IdentityRegistry proxy...");
+  const currentIdentityImpl = await getImplementation(identityProxyAddress);
+  const currentIdentityImplAddress = currentIdentityImpl ? `0x${currentIdentityImpl.slice(-40)}` : null;
+
+  if (currentIdentityImplAddress?.toLowerCase() === identityImpl.toLowerCase()) {
+    console.log("   ⏭️  Already upgraded to IdentityRegistryUpgradeable");
+    console.log(`   Current implementation: ${identityImpl}`);
+    console.log("");
+  } else {
+    console.log("   Upgrading IdentityRegistry proxy...");
+    const identityUpgradeData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "upgradeToAndCall",
+      args: [identityImpl, "0x" as `0x${string}`]
+    });
+    const identityUpgradeTxHash = await ownerWallet.sendTransaction({
+      to: identityProxyAddress,
+      data: identityUpgradeData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: identityUpgradeTxHash });
+    console.log("   ✅ Upgraded to IdentityRegistryUpgradeable");
+    console.log(`   Transaction: ${identityUpgradeTxHash}`);
+    console.log("");
+  }
 
   // Upgrade ReputationRegistry proxy
-  console.log("2. Upgrading ReputationRegistry proxy...");
-  const reputationUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [reputationImpl, "0x" as `0x${string}`]
-  });
-  const reputationUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: reputationProxyAddress,
-    data: reputationUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: reputationUpgradeTxHash });
-  console.log("   ✅ Upgraded to ReputationRegistryUpgradeable");
-  console.log(`   Transaction: ${reputationUpgradeTxHash}`);
-  console.log("");
+  console.log("2. Checking ReputationRegistry proxy...");
+  const currentReputationImpl = await getImplementation(reputationProxyAddress);
+  const currentReputationImplAddress = currentReputationImpl ? `0x${currentReputationImpl.slice(-40)}` : null;
+
+  if (currentReputationImplAddress?.toLowerCase() === reputationImpl.toLowerCase()) {
+    console.log("   ⏭️  Already upgraded to ReputationRegistryUpgradeable");
+    console.log(`   Current implementation: ${reputationImpl}`);
+    console.log("");
+  } else {
+    console.log("   Upgrading ReputationRegistry proxy...");
+    const reputationUpgradeData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "upgradeToAndCall",
+      args: [reputationImpl, "0x" as `0x${string}`]
+    });
+    const reputationUpgradeTxHash = await ownerWallet.sendTransaction({
+      to: reputationProxyAddress,
+      data: reputationUpgradeData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: reputationUpgradeTxHash });
+    console.log("   ✅ Upgraded to ReputationRegistryUpgradeable");
+    console.log(`   Transaction: ${reputationUpgradeTxHash}`);
+    console.log("");
+  }
 
   // Upgrade ValidationRegistry proxy
-  console.log("3. Upgrading ValidationRegistry proxy...");
-  const validationUpgradeData = encodeFunctionData({
-    abi: minimalUUPSArtifact.abi,
-    functionName: "upgradeToAndCall",
-    args: [validationImpl, "0x" as `0x${string}`]
-  });
-  const validationUpgradeTxHash = await ownerWallet.sendTransaction({
-    to: validationProxyAddress,
-    data: validationUpgradeData,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: validationUpgradeTxHash });
-  console.log("   ✅ Upgraded to ValidationRegistryUpgradeable");
-  console.log(`   Transaction: ${validationUpgradeTxHash}`);
-  console.log("");
+  console.log("3. Checking ValidationRegistry proxy...");
+  const currentValidationImpl = await getImplementation(validationProxyAddress);
+  const currentValidationImplAddress = currentValidationImpl ? `0x${currentValidationImpl.slice(-40)}` : null;
+
+  if (currentValidationImplAddress?.toLowerCase() === validationImpl.toLowerCase()) {
+    console.log("   ⏭️  Already upgraded to ValidationRegistryUpgradeable");
+    console.log(`   Current implementation: ${validationImpl}`);
+    console.log("");
+  } else {
+    console.log("   Upgrading ValidationRegistry proxy...");
+    const validationUpgradeData = encodeFunctionData({
+      abi: minimalUUPSArtifact.abi,
+      functionName: "upgradeToAndCall",
+      args: [validationImpl, "0x" as `0x${string}`]
+    });
+    const validationUpgradeTxHash = await ownerWallet.sendTransaction({
+      to: validationProxyAddress,
+      data: validationUpgradeData,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: validationUpgradeTxHash });
+    console.log("   ✅ Upgraded to ValidationRegistryUpgradeable");
+    console.log(`   Transaction: ${validationUpgradeTxHash}`);
+    console.log("");
+  }
 
   console.log("=".repeat(80));
   console.log("UPGRADES COMPLETE");
