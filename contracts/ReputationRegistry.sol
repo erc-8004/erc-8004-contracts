@@ -195,9 +195,10 @@ contract ReputationRegistry {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
-
+                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
+                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
+                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
+                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
                 totalScore += fb.score;
                 count++;
             }
@@ -233,8 +234,10 @@ contract ReputationRegistry {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
+                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
+                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
+                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
+                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
                 totalCount++;
             }
         }
@@ -253,8 +256,10 @@ contract ReputationRegistry {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = _feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
+                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
+                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
+                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
+                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
                 scores[idx] = fb.score;
