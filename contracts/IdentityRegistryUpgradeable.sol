@@ -30,7 +30,7 @@ contract IdentityRegistryUpgradeable is
     }
 
     function initialize() public initializer {
-        __ERC721_init("AgentIdentity", "AID");
+        __ERC721_init("AgentIdentity", "AGENT");
         __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
