@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 interface IIdentityRegistry {
     function ownerOf(uint256 tokenId) external view returns (address);
+    function getApproved(uint256 tokenId) external view returns (address);
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
-contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     address private identityRegistry;
 
     event ValidationRequest(
@@ -27,7 +27,7 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         uint8 response,
         string responseUri,
         bytes32 responseHash,
-        bytes32 tag
+        string tag
     );
 
     struct ValidationStatus {
@@ -35,8 +35,9 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         uint256 agentId;
         uint8 response;       // 0..100
         bytes32 responseHash;
-        bytes32 tag;
+        string tag;
         uint256 lastUpdate;
+        bool hasResponse;
     }
 
     // requestHash => validation status
@@ -77,7 +78,9 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         IIdentityRegistry registry = IIdentityRegistry(identityRegistry);
         address owner = registry.ownerOf(agentId);
         require(
-            msg.sender == owner || registry.isApprovedForAll(owner, msg.sender),
+            msg.sender == owner ||
+            registry.isApprovedForAll(owner, msg.sender) ||
+            registry.getApproved(agentId) == msg.sender,
             "Not authorized"
         );
 
@@ -86,8 +89,9 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
             agentId: agentId,
             response: 0,
             responseHash: bytes32(0),
-            tag: bytes32(0),
-            lastUpdate: block.timestamp
+            tag: "",
+            lastUpdate: block.timestamp,
+            hasResponse: false
         });
 
         // Track for lookups
@@ -102,7 +106,7 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         uint8 response,
         string calldata responseUri,
         bytes32 responseHash,
-        bytes32 tag
+        string calldata tag
     ) external {
         ValidationStatus storage s = validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
@@ -112,13 +116,14 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
         s.responseHash = responseHash;
         s.tag = tag;
         s.lastUpdate = block.timestamp;
+        s.hasResponse = true;
         emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseUri, responseHash, tag);
     }
 
     function getValidationStatus(bytes32 requestHash)
         external
         view
-        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, bytes32 tag, uint256 lastUpdate)
+        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
     {
         ValidationStatus memory s = validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
@@ -128,7 +133,7 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function getSummary(
         uint256 agentId,
         address[] calldata validatorAddresses,
-        bytes32 tag
+        string calldata tag
     ) external view returns (uint64 count, uint8 avgResponse) {
         uint256 totalResponse = 0;
         count = 0;
@@ -149,10 +154,10 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
                 }
             }
 
-            // Filter by tag (0x0 means no filter)
-            bool matchTag = (tag == bytes32(0)) || (s.tag == tag);
+            // Filter by tag (empty string means no filter)
+            bool matchTag = (keccak256(bytes(tag)) == keccak256(bytes(""))) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
 
-            if (matchValidator && matchTag && s.response >= 0) {
+            if (matchValidator && matchTag && s.hasResponse) {
                 totalResponse += s.response;
                 count++;
             }
@@ -172,6 +177,6 @@ contract ValidationRegistryUpgradeable is Initializable, OwnableUpgradeable, UUP
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function getVersion() external pure returns (string memory) {
-        return "1.0.0";
+        return "1.1.0";
     }
 }
