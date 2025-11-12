@@ -15,7 +15,7 @@ contract IdentityRegistry is ERC721URIStorage, Ownable {
         string metadataValue;
     }
 
-    event Registered(uint256 indexed agentId, string tokenUri, address indexed owner);
+    event Registered(uint256 indexed agentId, string agentUri, address indexed owner);
     event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, string metadataValue);
     event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy);
 
