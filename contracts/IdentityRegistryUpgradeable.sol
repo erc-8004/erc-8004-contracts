@@ -12,7 +12,7 @@ contract IdentityRegistryUpgradeable is
 {
     uint256 private _lastId;
 
-    // agentId => key => value
+    // agentId => metadataKey => metadataValue
     mapping(uint256 => mapping(string => string)) private _metadata;
 
     struct MetadataEntry {
