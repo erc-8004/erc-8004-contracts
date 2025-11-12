@@ -43,18 +43,18 @@ contract IdentityRegistryUpgradeable is
         emit Registered(agentId, "", msg.sender);
     }
 
-    function register(string memory tokenUri) external returns (uint256 agentId) {
+    function register(string memory agentUri) external returns (uint256 agentId) {
         agentId = _lastId++;
         _safeMint(msg.sender, agentId);
-        _setTokenURI(agentId, tokenUri);
-        emit Registered(agentId, tokenUri, msg.sender);
+        _setTokenURI(agentId, agentUri);
+        emit Registered(agentId, agentUri, msg.sender);
     }
 
-    function register(string memory tokenUri, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
+    function register(string memory agentUri, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         agentId = _lastId++;
         _safeMint(msg.sender, agentId);
-        _setTokenURI(agentId, tokenUri);
-        emit Registered(agentId, tokenUri, msg.sender);
+        _setTokenURI(agentId, agentUri);
+        emit Registered(agentId, agentUri, msg.sender);
 
         for (uint256 i = 0; i < metadata.length; i++) {
             _metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
