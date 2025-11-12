@@ -4,15 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "hardhat test",
-    "test:upgradeable": "hardhat test test/ERC8004Upgradeable.ts",
-    "test:all": "hardhat test test/ERC8004.ts && hardhat test test/ERC8004Upgradeable.ts",
-    "local": "npx hardhat node",
-    "deploy": "npx hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
-    "deploy:upgradeable": "npx hardhat run scripts/deploy-upgradeable.ts --network localhost",
-    "deploy:upgradeable:sepolia": "npx hardhat run scripts/deploy-upgradeable.ts --network sepolia",
-    "upgrade": "npx hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "npx hardhat run scripts/upgrade-contracts.ts --network sepolia"
+    "test:core": "node --import tsx --test test/ERC8004.ts",
+    "test:upgradeable": "node --import tsx --test test/ERC8004Upgradeable.ts",
+    "test": "npm run test:core && npm run test:upgradeable",
+    "local:node": "npx hardhat node",
+    "local:deploy:all": "npm run local:deploy:factory && npm run local:deploy:minimal-uups && npm run local:fund-owner && npm run local:deploy:vanity",
+    "local:deploy:factory": "npx hardhat run scripts/deploy-create2-factory.ts --network localhost",
+    "local:deploy:minimal-uups": "npx hardhat run scripts/deploy-minimal-uups.ts --network localhost",
+    "local:fund-owner": "npx hardhat run scripts/fund-local-owner.ts --network localhost",
+    "local:find-salts": "npx hardhat run scripts/find-vanity-salts.ts --network localhost",
+    "local:find-salts:parallel": "npx hardhat run scripts/find-vanity-salts-parallel.ts --network localhost",
+    "local:deploy:vanity": "npx hardhat run scripts/deploy-vanity.ts --network localhost",
+    "deploy:sepolia": "npx hardhat run scripts/deploy-vanity.ts --network sepolia"
   },
   "keywords": [],
   "author": "",
@@ -39,6 +42,8 @@
   },
   "type": "module",
   "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0"
+    "@openzeppelin/contracts": "^5.4.0",
+    "@safe-global/safe-singleton-factory": "^2.0.0",
+    "dotenv": "^17.2.3"
   }
 }
