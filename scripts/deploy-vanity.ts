@@ -349,11 +349,14 @@ async function main() {
   console.log("⚠️  NEXT STEPS");
   console.log("=".repeat(80));
   console.log("");
-  console.log("1. Owner must run upgrade script:");
-  console.log("   npm run upgrade:vanity -- --network <network>");
+  console.log("1. Owner can generate 3 pre-signed upgrade transactions:");
+  console.log("   npx hardhat run scripts/generate-triple-presigned-upgrade.ts --network <network>");
   console.log("");
-  console.log("2. After upgrades, verify deployment:");
-  console.log("   npm run verify:vanity -- --network <network>");
+  console.log("2. Broadcast all 3 pre-signed transactions:");
+  console.log("   npx hardhat run scripts/broadcast-triple-presigned-upgrade.ts --network <network>");
+  console.log("");
+  console.log("3. Or upgrade manually (requires owner private key):");
+  console.log("   npm run upgrade:vanity -- --network <network>");
   console.log("");
 
   return {
