@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
-import { getAddress, keccak256, toHex } from "viem";
+import { getAddress, keccak256, toHex, Hex } from "viem";
+
+/**
+ * Deployed vanity addresses (deterministic CREATE2 addresses)
+ */
+const DEPLOYED_ADDRESSES = {
+  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997" as const,
+  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876" as const,
+  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3" as const,
+};
 
 describe("ERC8004 Registries", async function () {
-  const { viem } = await network.connect();
+  const { viem } = await network.connect("localhost");
   const publicClient = await viem.getPublicClient();
 
   // Helper function to extract agentId from Registered event
@@ -17,9 +26,29 @@ describe("ERC8004 Registries", async function () {
     return BigInt(registeredLog.topics[1]);
   }
 
+  // Helper functions to get deployed contract instances
+  async function getIdentityRegistry() {
+    return await viem.getContractAt("IdentityRegistryUpgradeable", DEPLOYED_ADDRESSES.identityRegistry);
+  }
+
+  async function getReputationRegistry() {
+    return await viem.getContractAt("ReputationRegistryUpgradeable", DEPLOYED_ADDRESSES.reputationRegistry);
+  }
+
+  async function getValidationRegistry() {
+    return await viem.getContractAt("ValidationRegistryUpgradeable", DEPLOYED_ADDRESSES.validationRegistry);
+  }
+
+  // Helper function to generate random request hash
+  function generateRandomRequestHash(): Hex {
+    const randomBytes = new Uint8Array(32);
+    crypto.getRandomValues(randomBytes);
+    return `0x${Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')}` as Hex;
+  }
+
   describe("IdentityRegistry", async function () {
     it("Should register an agent with tokenURI", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner] = await viem.getWalletClients();
 
       const tokenURI = "ipfs://QmTest123";
@@ -36,7 +65,7 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should auto-increment agentId", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
 
       const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
       const txHash2 = await identityRegistry.write.register(["ipfs://agent2"]);
@@ -65,7 +94,7 @@ describe("ERC8004 Registries", async function () {
      * changes, it can be updated with _setTokenURI() as per ERC721URIStorage."
      */
     it("Should allow owner to update tokenURI", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner] = await viem.getWalletClients();
 
       // Register with initial URI
@@ -90,7 +119,7 @@ describe("ERC8004 Registries", async function () {
      * (e.g., ipfs://cid) or https:// (e.g., https://domain.com/agent3.json)."
      */
     it("Should support different URI schemes for tokenURI", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
 
       // Test ipfs://
       const txHash1 = await identityRegistry.write.register(["ipfs://QmTestCID123"]);
@@ -112,7 +141,7 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should set and get metadata", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner] = await viem.getWalletClients();
 
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
@@ -135,7 +164,7 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should only allow owner to set metadata", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner, attacker] = await viem.getWalletClients();
 
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
@@ -151,7 +180,7 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should register with metadata array", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner] = await viem.getWalletClients();
 
       const tokenURI = "ipfs://agent-with-metadata";
@@ -176,7 +205,7 @@ describe("ERC8004 Registries", async function () {
      * // tokenURI is added later with _setTokenURI()"
      */
     it("Should register without tokenURI and set it later", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
+      const identityRegistry = await getIdentityRegistry();
       const [owner] = await viem.getWalletClients();
 
       // Register without tokenURI
@@ -204,20 +233,16 @@ describe("ERC8004 Registries", async function () {
      * function getIdentityRegistry() external view returns (address identityRegistry)"
      */
     it("Should return the identity registry address", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const retrievedAddress = await reputationRegistry.read.getIdentityRegistry();
       assert.equal(retrievedAddress.toLowerCase(), identityRegistry.address.toLowerCase());
     });
 
     it("Should give feedback to an agent", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -257,10 +282,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should revoke feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -293,10 +316,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should append response to feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -326,10 +347,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should track multiple feedbacks from same client", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -367,10 +386,8 @@ describe("ERC8004 Registries", async function () {
      * "The agentId must be a validly registered agent. The score MUST be between 0 and 100."
      */
     it("Should reject feedback for non-existent agent", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       // Don't register any agent, try to give feedback to agentId 999
       await assert.rejects(
@@ -389,10 +406,8 @@ describe("ERC8004 Registries", async function () {
      * "The score MUST be between 0 and 100."
      */
     it("Should reject score > 100", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       await identityRegistry.write.register(["ipfs://agent"]);
 
@@ -412,10 +427,8 @@ describe("ERC8004 Registries", async function () {
      * "The score MUST be between 0 and 100."
      */
     it("Should accept score of 0", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -439,10 +452,8 @@ describe("ERC8004 Registries", async function () {
      * "The score MUST be between 0 and 100."
      */
     it("Should accept score of 100", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -463,10 +474,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should reject feedback without auth (empty bytes)", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -489,10 +498,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should calculate summary with average score", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client1, client2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -528,10 +535,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter summary by tags", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -553,10 +558,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should read all feedback with filters", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client1, client2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -590,10 +593,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should store responses and count them", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder1, responder2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -632,10 +633,8 @@ describe("ERC8004 Registries", async function () {
      * "function getClients(uint256 agentId) external view returns (address[] memory)"
      */
     it("Should return list of clients who gave feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client1, client2, client3] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -673,10 +672,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter with empty string wildcard for tag1 in getSummary", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -707,10 +704,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter with empty string wildcard for tag2 in getSummary", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -741,10 +736,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter with empty string wildcard for both tags in getSummary", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -775,10 +768,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter with empty string wildcard in readAllFeedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -817,10 +808,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should count all responses for all feedbacks from all clients", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client1, client2, responder1, responder2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -861,10 +850,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should count responses for specific client", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder1, responder2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -898,10 +885,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should count responses for specific feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder1, responder2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -932,10 +917,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should filter response count by specific responders", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder1, responder2, responder3] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -969,10 +952,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should return 0 for getLastIndex when client has no feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -984,10 +965,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should track getLastIndex correctly after multiple feedbacks", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1017,10 +996,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should read specific feedback by index", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1054,10 +1031,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should reject reading feedback with out of bounds index", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1080,10 +1055,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should allow multiple responses from same responder to same feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1119,10 +1092,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should allow responses to revoked feedback", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client, responder] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1157,10 +1128,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should return correct list of unique clients via getClients", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const reputationRegistry = await viem.deployContract("ReputationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const reputationRegistry = await getReputationRegistry();
 
       const [agentOwner, client1, client2, client3] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
@@ -1213,17 +1182,15 @@ describe("ERC8004 Registries", async function () {
 
   describe("ValidationRegistry", async function () {
     it("Should create validation request", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       const requestUri = "ipfs://validation-request";
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       await viem.assertions.emitWithArgs(
         validationRegistry.write.validationRequest([
@@ -1245,17 +1212,15 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should submit validation response", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       const requestUri = "ipfs://validation-request";
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
@@ -1289,17 +1254,15 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should reject duplicate validation requests", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       const requestUri = "ipfs://validation-request";
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
@@ -1320,17 +1283,15 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should only allow validator to respond", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator, attacker] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       const requestUri = "ipfs://validation-request";
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
@@ -1349,16 +1310,14 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should reject response > 100", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
@@ -1376,10 +1335,8 @@ describe("ERC8004 Registries", async function () {
     });
 
     it("Should get validation summary and track validations", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator1, validator2] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
@@ -1387,9 +1344,14 @@ describe("ERC8004 Registries", async function () {
 
       const tag = "quality";
 
+      // Get initial counts
+      const initialAgentValidations = await validationRegistry.read.getAgentValidations([agentId]);
+      const initialValidator1Requests = await validationRegistry.read.getValidatorRequests([validator1.account.address]);
+      const initialValidator1Count = initialValidator1Requests.length;
+
       // Create 2 validation requests
-      const req1 = keccak256(toHex("request1"));
-      const req2 = keccak256(toHex("request2"));
+      const req1 = generateRandomRequestHash();
+      const req2 = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([validator1.account.address, agentId, "ipfs://req1", req1]);
       await validationRegistry.write.validationRequest([validator2.account.address, agentId, "ipfs://req2", req2]);
@@ -1411,27 +1373,25 @@ describe("ERC8004 Registries", async function () {
       assert.equal(summary[0], 0n); // count (broken due to tag type mismatch)
       assert.equal(summary[1], 0); // average (no valid responses matched)
 
-      // Get agent validations
+      // Get agent validations - should have increased by 2
       const validations = await validationRegistry.read.getAgentValidations([agentId]);
-      assert.equal(validations.length, 2);
+      assert.equal(validations.length, initialAgentValidations.length + 2);
 
-      // Get validator requests
+      // Get validator requests - should have increased by 1 (only validator1 got a request)
       const requests = await validationRegistry.read.getValidatorRequests([validator1.account.address]);
-      assert.equal(requests.length, 1);
-      assert.equal(requests[0], req1);
+      assert.equal(requests.length, initialValidator1Count + 1);
+      assert.equal(requests[requests.length - 1], req1); // Check the last request is req1
     });
 
     it("Should only allow agent owner to request validation", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, attacker, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestHash = keccak256(toHex("request"));
+      const requestHash = generateRandomRequestHash();
 
       // Attacker tries to request validation for someone else's agent
       await assert.rejects(
@@ -1456,16 +1416,14 @@ describe("ERC8004 Registries", async function () {
      * validation status."
      */
     it("Should allow multiple validation responses for same request", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestHash = keccak256(toHex("request data"));
+      const requestHash = generateRandomRequestHash();
 
       // Create request
       await validationRegistry.write.validationRequest([
@@ -1505,10 +1463,8 @@ describe("ERC8004 Registries", async function () {
      * is visible by calling getIdentityRegistry()"
      */
     it("Should return the identity registry address", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const retrievedAddress = await validationRegistry.read.getIdentityRegistry();
       assert.equal(retrievedAddress.toLowerCase(), identityRegistry.address.toLowerCase());
@@ -1519,16 +1475,14 @@ describe("ERC8004 Registries", async function () {
      * or with intermediate values for validations with a spectrum of outcomes."
      */
     it("Should accept response of 0 (failed)", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestHash = keccak256(toHex("request"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
@@ -1552,16 +1506,14 @@ describe("ERC8004 Registries", async function () {
      * or with intermediate values for validations with a spectrum of outcomes."
      */
     it("Should accept intermediate response values", async function () {
-      const identityRegistry = await viem.deployContract("IdentityRegistry");
-      const validationRegistry = await viem.deployContract("ValidationRegistry", [
-        identityRegistry.address,
-      ]);
+      const identityRegistry = await getIdentityRegistry();
+      const validationRegistry = await getValidationRegistry();
 
       const [owner, validator] = await viem.getWalletClients();
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestHash = keccak256(toHex("request"));
+      const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,

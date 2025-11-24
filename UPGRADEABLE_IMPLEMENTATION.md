@@ -175,27 +175,7 @@ The upgrade process:
 
 ## Testing
 
-### Original Test Suite
-
-All 40 original tests pass with the existing contracts:
-
-```bash
-npx hardhat test test/ERC8004.ts
-```
-
-### Upgradeable Tests
-
-The upgradeable test suite includes:
-- Proxy deployment and initialization
-- Preventing double initialization
-- Functionality through proxy
-- Upgrade mechanism
-- Storage persistence across upgrades
-- Authorization controls
-
-```bash
-npx hardhat test test/ERC8004Upgradeable.ts
-```
+`npm run test` will run both core and upgradeable test suites.
 
 ## Version Management
 
