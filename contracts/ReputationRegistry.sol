@@ -27,6 +27,7 @@ contract ReputationRegistry {
         uint8 score,
         string indexed tag1,
         string tag2,
+        string endpoint,
         string feedbackUri,
         bytes32 feedbackHash
     );
@@ -50,6 +51,7 @@ contract ReputationRegistry {
         uint8 score;
         string tag1;
         string tag2;
+        string endpoint;
         bool isRevoked;
     }
 
@@ -84,6 +86,7 @@ contract ReputationRegistry {
         uint8 score,
         string calldata tag1,
         string calldata tag2,
+        string calldata endpoint,
         string calldata feedbackUri,
         bytes32 feedbackHash
     ) external {
@@ -112,6 +115,7 @@ contract ReputationRegistry {
             score: score,
             tag1: tag1,
             tag2: tag2,
+            endpoint: endpoint,
             isRevoked: false
         });
 
@@ -124,7 +128,7 @@ contract ReputationRegistry {
             _clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, feedbackUri, feedbackHash);
+        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, endpoint, feedbackUri, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
@@ -166,12 +170,12 @@ contract ReputationRegistry {
     function readFeedback(uint256 agentId, address clientAddress, uint64 index)
         external
         view
-        returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
+        returns (uint8 score, string memory tag1, string memory tag2, string memory endpoint, bool isRevoked)
     {
         require(index > 0, "index must be > 0");
         require(index <= _lastIndex[agentId][clientAddress], "index out of bounds");
         Feedback storage f = _feedback[agentId][clientAddress][index];
-        return (f.score, f.tag1, f.tag2, f.isRevoked);
+        return (f.score, f.tag1, f.tag2, f.endpoint, f.isRevoked);
     }
 
     function getSummary(

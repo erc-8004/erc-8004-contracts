@@ -11,8 +11,6 @@ interface IIdentityRegistry {
 }
 
 contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
-    address private identityRegistry;
-
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,
@@ -40,14 +38,26 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool hasResponse;
     }
 
-    // requestHash => validation status
-    mapping(bytes32 => ValidationStatus) public validations;
+    /// @custom:storage-location erc7201:erc8004.validation.registry
+    struct ValidationRegistryStorage {
+        address identityRegistry;
+        // requestHash => validation status
+        mapping(bytes32 => ValidationStatus) validations;
+        // agentId => list of requestHashes
+        mapping(uint256 => bytes32[]) _agentValidations;
+        // validatorAddress => list of requestHashes
+        mapping(address => bytes32[]) _validatorRequests;
+    }
 
-    // agentId => list of requestHashes
-    mapping(uint256 => bytes32[]) private _agentValidations;
+    // keccak256(abi.encode(uint256(keccak256("erc8004.validation.registry")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant VALIDATION_REGISTRY_STORAGE_LOCATION =
+        0x21543a2dd0df813994fbf82c69c61d1aafcdce183d68d2ef40068bdce1481100;
 
-    // validatorAddress => list of requestHashes
-    mapping(address => bytes32[]) private _validatorRequests;
+    function _getValidationRegistryStorage() private pure returns (ValidationRegistryStorage storage $) {
+        assembly {
+            $.slot := VALIDATION_REGISTRY_STORAGE_LOCATION
+        }
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -58,11 +68,13 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         require(_identityRegistry != address(0), "bad identity");
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        identityRegistry = _identityRegistry;
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        $.identityRegistry = _identityRegistry;
     }
 
     function getIdentityRegistry() external view returns (address) {
-        return identityRegistry;
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        return $.identityRegistry;
     }
 
     function validationRequest(
@@ -71,11 +83,12 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata requestUri,
         bytes32 requestHash
     ) external {
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         require(validatorAddress != address(0), "bad validator");
-        require(validations[requestHash].validatorAddress == address(0), "exists");
+        require($.validations[requestHash].validatorAddress == address(0), "exists");
 
         // Check permission: caller must be owner or approved operator
-        IIdentityRegistry registry = IIdentityRegistry(identityRegistry);
+        IIdentityRegistry registry = IIdentityRegistry($.identityRegistry);
         address owner = registry.ownerOf(agentId);
         require(
             msg.sender == owner ||
@@ -84,7 +97,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             "Not authorized"
         );
 
-        validations[requestHash] = ValidationStatus({
+        $.validations[requestHash] = ValidationStatus({
             validatorAddress: validatorAddress,
             agentId: agentId,
             response: 0,
@@ -95,8 +108,8 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         });
 
         // Track for lookups
-        _agentValidations[agentId].push(requestHash);
-        _validatorRequests[validatorAddress].push(requestHash);
+        $._agentValidations[agentId].push(requestHash);
+        $._validatorRequests[validatorAddress].push(requestHash);
 
         emit ValidationRequest(validatorAddress, agentId, requestUri, requestHash);
     }
@@ -108,7 +121,8 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 responseHash,
         string calldata tag
     ) external {
-        ValidationStatus storage s = validations[requestHash];
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        ValidationStatus storage s = $.validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
         require(msg.sender == s.validatorAddress, "not validator");
         require(response <= 100, "resp>100");
@@ -125,7 +139,8 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         view
         returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
     {
-        ValidationStatus memory s = validations[requestHash];
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        ValidationStatus memory s = $.validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
         return (s.validatorAddress, s.agentId, s.response, s.responseHash, s.tag, s.lastUpdate);
     }
@@ -135,13 +150,14 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         address[] calldata validatorAddresses,
         string calldata tag
     ) external view returns (uint64 count, uint8 avgResponse) {
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         uint256 totalResponse = 0;
         count = 0;
 
-        bytes32[] storage requestHashes = _agentValidations[agentId];
+        bytes32[] storage requestHashes = $._agentValidations[agentId];
 
         for (uint256 i = 0; i < requestHashes.length; i++) {
-            ValidationStatus storage s = validations[requestHashes[i]];
+            ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified
             bool matchValidator = (validatorAddresses.length == 0);
@@ -167,11 +183,13 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory) {
-        return _agentValidations[agentId];
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        return $._agentValidations[agentId];
     }
 
     function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory) {
-        return _validatorRequests[validatorAddress];
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        return $._validatorRequests[validatorAddress];
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

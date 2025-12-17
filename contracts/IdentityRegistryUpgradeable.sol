@@ -10,14 +10,26 @@ contract IdentityRegistryUpgradeable is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    uint256 private _lastId;
-
-    // agentId => metadataKey => metadataValue
-    mapping(uint256 => mapping(string => string)) private _metadata;
-
     struct MetadataEntry {
         string metadataKey;
         string metadataValue;
+    }
+
+    /// @custom:storage-location erc7201:erc8004.identity.registry
+    struct IdentityRegistryStorage {
+        uint256 _lastId;
+        // agentId => metadataKey => metadataValue
+        mapping(uint256 => mapping(string => string)) _metadata;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant IDENTITY_REGISTRY_STORAGE_LOCATION =
+        0xa040f782729de4970518741823ec1276cbcd41a0c7493f62d173341566a04e00;
+
+    function _getIdentityRegistryStorage() private pure returns (IdentityRegistryStorage storage $) {
+        assembly {
+            $.slot := IDENTITY_REGISTRY_STORAGE_LOCATION
+        }
     }
 
     event Registered(uint256 indexed agentId, string agentUri, address indexed owner);
@@ -34,36 +46,41 @@ contract IdentityRegistryUpgradeable is
         __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        _lastId = 0;
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        $._lastId = 0;
     }
 
     function register() external returns (uint256 agentId) {
-        agentId = _lastId++;
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
         emit Registered(agentId, "", msg.sender);
     }
 
     function register(string memory agentUri) external returns (uint256 agentId) {
-        agentId = _lastId++;
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
         _setTokenURI(agentId, agentUri);
         emit Registered(agentId, agentUri, msg.sender);
     }
 
     function register(string memory agentUri, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
-        agentId = _lastId++;
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
         _setTokenURI(agentId, agentUri);
         emit Registered(agentId, agentUri, msg.sender);
 
         for (uint256 i = 0; i < metadata.length; i++) {
-            _metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
+            $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
             emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
         }
     }
 
     function getMetadata(uint256 agentId, string memory metadataKey) external view returns (string memory) {
-        return _metadata[agentId][metadataKey];
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        return $._metadata[agentId][metadataKey];
     }
 
     function setMetadata(uint256 agentId, string memory metadataKey, string memory metadataValue) external {
@@ -73,7 +90,8 @@ contract IdentityRegistryUpgradeable is
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
-        _metadata[agentId][metadataKey] = metadataValue;
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        $._metadata[agentId][metadataKey] = metadataValue;
         emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
     }
 
