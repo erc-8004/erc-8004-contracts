@@ -5,6 +5,7 @@ This document describes the UUPS (Universal Upgradeable Proxy Standard) proxy pa
 ## Overview
 
 The ERC-8004 protocol now includes upgradeable versions of all three core registries:
+
 - **IdentityRegistryUpgradeable** - UUPS upgradeable version of the identity registry
 - **ReputationRegistryUpgradeable** - UUPS upgradeable version of the reputation registry
 - **ValidationRegistryUpgradeable** - UUPS upgradeable version of the validation registry
@@ -14,6 +15,7 @@ The ERC-8004 protocol now includes upgradeable versions of all three core regist
 ### UUPS Proxy Pattern
 
 The implementation uses the UUPS (EIP-1822) pattern, which provides:
+
 - **Upgradeability**: Contract logic can be upgraded while preserving state and address
 - **Gas efficiency**: Lower deployment costs compared to transparent proxy pattern
 - **Security**: Upgrade authorization is part of the implementation contract itself
@@ -21,12 +23,14 @@ The implementation uses the UUPS (EIP-1822) pattern, which provides:
 ### Key Components
 
 1. **Implementation Contracts** (`contracts/*Upgradeable.sol`)
+
    - Contains the actual business logic
    - Inherits from OpenZeppelin's upgradeable base contracts
    - Uses `initialize()` function instead of constructor
    - Includes `_authorizeUpgrade()` for upgrade authorization (owner-only)
 
 2. **Proxy Contract** (`contracts/ERC1967Proxy.sol`)
+
    - Lightweight wrapper around OpenZeppelin's ERC1967Proxy
    - Delegates all calls to the implementation contract
    - Maintains all storage data
@@ -50,7 +54,6 @@ contracts/
 └── ERC1967Proxy.sol                        # Proxy contract wrapper
 
 scripts/
-├── deploy-upgradeable.ts                   # Deployment script for upgradeable contracts
 └── upgrade-contracts.ts                    # Script to upgrade existing proxies
 
 ignition/
@@ -72,14 +75,8 @@ test/
 npx hardhat ignition deploy ./ignition/modules/ERC8004Upgradeable.ts --network <network>
 ```
 
-### Using Deployment Script
-
-```bash
-# Deploy using the script
-npx hardhat run scripts/deploy-upgradeable.ts --network <network>
-```
-
 The deployment process:
+
 1. Deploys implementation contracts
 2. Deploys ERC1967Proxy for each implementation
 3. Initializes each proxy with appropriate parameters
@@ -97,7 +94,7 @@ import hre from "hardhat";
 // Get contract instance through proxy
 const identityRegistry = await hre.viem.getContractAt(
   "IdentityRegistryUpgradeable",
-  PROXY_ADDRESS  // Use proxy address
+  PROXY_ADDRESS // Use proxy address
 );
 
 // Use normally
@@ -117,6 +114,7 @@ npx hardhat run scripts/upgrade-contracts.ts --network <network>
 ```
 
 The upgrade process:
+
 1. Deploys new implementation contracts
 2. Calls `upgradeToAndCall()` on each proxy (owner-only)
 3. Verifies upgrade success
@@ -215,15 +213,18 @@ When upgrading, increment this version number to track deployed versions.
 ### For Developers
 
 1. **Never deploy and use implementation contracts directly**
+
    - Always interact through proxy addresses
    - Implementation addresses are for upgrade purposes only
 
 2. **Test thoroughly before upgrading**
+
    - Deploy to testnet first
    - Verify all functionality works
    - Check storage persistence
 
 3. **Maintain storage layout**
+
    - Never remove or reorder existing storage variables
    - Only add new storage variables at the end
    - Use storage gaps for future extensibility
@@ -236,11 +237,13 @@ When upgrading, increment this version number to track deployed versions.
 ### For Operators
 
 1. **Backup before upgrades**
+
    - Export critical data before upgrading
    - Have rollback plan ready
    - Test upgrade on fork first
 
 2. **Secure owner keys**
+
    - Owner can upgrade contracts
    - Use multi-sig or timelock for production
    - Consider transferring ownership to governance
@@ -255,10 +258,12 @@ When upgrading, increment this version number to track deployed versions.
 If you have existing non-upgradeable contracts deployed:
 
 1. **Cannot upgrade existing deployments**
+
    - Original contracts don't have proxy pattern
    - Must deploy new upgradeable versions
 
 2. **Data migration options**
+
    - Export data from old contracts
    - Recreate state in new contracts
    - Consider keeping old contracts for historical data
@@ -278,6 +283,7 @@ If you have existing non-upgradeable contracts deployed:
 ## Support
 
 For issues or questions:
+
 - Check existing tests for usage examples
 - Review OpenZeppelin upgradeable documentation
 - Test on local network or testnet first
