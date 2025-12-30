@@ -10,7 +10,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
   // Helper function to extract agentId from Registered event
   async function getAgentIdFromRegistration(txHash: `0x${string}`) {
     const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
-    const registeredLog = receipt.logs.find(log => log.topics[0] === keccak256(toHex("Registered(uint256,string,address)")));
+    const registeredLog = receipt.logs.find((log: any) => log.topics[0] === keccak256(toHex("Registered(uint256,string,address)")));
     if (!registeredLog || !registeredLog.topics[1]) {
       throw new Error("Registered event not found");
     }
@@ -51,7 +51,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Verify initialization
       const version = await identityRegistry.read.getVersion();
-      assert.equal(version, "1.1.0");
+      assert.equal(version, "1.2.0");
 
       // Verify owner
       const contractOwner = await identityRegistry.read.owner();
@@ -96,6 +96,366 @@ describe("ERC8004 Upgradeable Registries", async function () {
       // Verify owner
       const tokenOwner = await identityRegistry.read.ownerOf([agentId]);
       assert.equal(tokenOwner.toLowerCase(), owner.account.address.toLowerCase());
+    });
+
+    it("Should set agentWallet with EOA signature (owner submits, new wallet signs)", async function () {
+      const [owner, newWalletSigner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      // Register an agent as owner
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n; // safely within +5 minutes
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      const stored = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(stored.toLowerCase(), newWalletSigner.account.address.toLowerCase());
+    });
+
+    it("Should set agentWallet with ERC-1271 wallet signature", async function () {
+      const [owner, signer] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      // Register an agent as owner
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Deploy ERC-1271 wallet mock that validates signatures from `signer`
+      const wallet1271 = await viem.deployContract("ERC1271WalletMock", [signer.account.address]);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await signer.signTypedData({
+        account: signer.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: wallet1271.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId, wallet1271.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      const stored = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(stored.toLowerCase(), wallet1271.address.toLowerCase());
+    });
+
+    it("Should enforce max +5 minutes deadline and expiry", async function () {
+      const [owner, newWalletSigner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const now = block.timestamp;
+
+      // Too far in the future (> 5 minutes)
+      {
+        const deadline = now + 1000n;
+        const sig = await newWalletSigner.signTypedData({
+          account: newWalletSigner.account,
+          domain: {
+            name: "ERC8004IdentityRegistry",
+            version: "1",
+            chainId,
+            verifyingContract: identityRegistry.address,
+          },
+          types: {
+            AgentWalletSet: [
+              { name: "agentId", type: "uint256" },
+              { name: "newWallet", type: "address" },
+              { name: "owner", type: "address" },
+              { name: "deadline", type: "uint256" },
+            ],
+          },
+          primaryType: "AgentWalletSet",
+          message: {
+            agentId,
+            newWallet: newWalletSigner.account.address,
+            owner: owner.account.address,
+            deadline,
+          },
+        });
+
+        await assert.rejects(
+          identityRegistry.write.setAgentWallet(
+            [agentId, newWalletSigner.account.address, deadline, sig],
+            { account: owner.account }
+          ),
+          /deadline too far/i
+        );
+      }
+
+      // Expired
+      {
+        const deadline = now - 1n;
+        const sig = await newWalletSigner.signTypedData({
+          account: newWalletSigner.account,
+          domain: {
+            name: "ERC8004IdentityRegistry",
+            version: "1",
+            chainId,
+            verifyingContract: identityRegistry.address,
+          },
+          types: {
+            AgentWalletSet: [
+              { name: "agentId", type: "uint256" },
+              { name: "newWallet", type: "address" },
+              { name: "owner", type: "address" },
+              { name: "deadline", type: "uint256" },
+            ],
+          },
+          primaryType: "AgentWalletSet",
+          message: {
+            agentId,
+            newWallet: newWalletSigner.account.address,
+            owner: owner.account.address,
+            deadline,
+          },
+        });
+
+        await assert.rejects(
+          identityRegistry.write.setAgentWallet(
+            [agentId, newWalletSigner.account.address, deadline, sig],
+            { account: owner.account }
+          ),
+          /expired/i
+        );
+      }
+    });
+
+    it("Should reject unauthorized caller even with valid wallet signature", async function () {
+      const [owner, newWalletSigner, attacker] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await assert.rejects(
+        identityRegistry.write.setAgentWallet(
+          [agentId, newWalletSigner.account.address, deadline, signature],
+          { account: attacker.account }
+        ),
+        /Not authorized/i
+      );
+    });
+
+    it("Should allow replaying the same signature within the 5-minute window (documented tradeoff)", async function () {
+      const [owner, newWalletSigner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      // First submit
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      // Replay submit (should still succeed)
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      const stored = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(stored.toLowerCase(), newWalletSigner.account.address.toLowerCase());
+    });
+
+    it("Should block setting reserved metadata key 'agentWallet' via setMetadata", async function () {
+      const [owner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      await assert.rejects(
+        identityRegistry.write.setMetadata([agentId, "agentWallet", "0xdeadbeef"]),
+        /reserved key/i
+      );
+    });
+
+    it("Should store agentWallet as reserved string metadata under key 'agentWallet'", async function () {
+      const [owner, newWalletSigner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      const meta = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
+      assert.equal(meta.toLowerCase(), newWalletSigner.account.address.toLowerCase());
+
+      const stored = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(stored.toLowerCase(), newWalletSigner.account.address.toLowerCase());
     });
 
     it("Should upgrade to new implementation", async function () {
@@ -582,7 +942,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
         // Verify Upgraded event was emitted (EIP-1967 standard)
         // Event signature: Upgraded(address indexed implementation)
         const upgradedEventSig = keccak256(toHex("Upgraded(address)"));
-        const upgradedEvent = receipt.logs.find(log => log.topics[0] === upgradedEventSig);
+        const upgradedEvent = receipt.logs.find((log: any) => log.topics[0] === upgradedEventSig);
 
         assert.ok(upgradedEvent, "Upgraded event should be emitted");
 
