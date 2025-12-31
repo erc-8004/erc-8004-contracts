@@ -12,14 +12,14 @@ contract IdentityRegistryUpgradeable is
 {
     struct MetadataEntry {
         string metadataKey;
-        string metadataValue;
+        bytes metadataValue;
     }
 
     /// @custom:storage-location erc7201:erc8004.identity.registry
     struct IdentityRegistryStorage {
         uint256 _lastId;
         // agentId => metadataKey => metadataValue
-        mapping(uint256 => mapping(string => string)) _metadata;
+        mapping(uint256 => mapping(string => bytes)) _metadata;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -33,7 +33,7 @@ contract IdentityRegistryUpgradeable is
     }
 
     event Registered(uint256 indexed agentId, string agentUri, address indexed owner);
-    event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, string metadataValue);
+    event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
     event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -78,12 +78,12 @@ contract IdentityRegistryUpgradeable is
         }
     }
 
-    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (string memory) {
+    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         return $._metadata[agentId][metadataKey];
     }
 
-    function setMetadata(uint256 agentId, string memory metadataKey, string memory metadataValue) external {
+    function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
         require(
             msg.sender == _ownerOf(agentId) ||
             isApprovedForAll(_ownerOf(agentId), msg.sender) ||

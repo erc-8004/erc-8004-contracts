@@ -3,8 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 interface IIdentityRegistry {
@@ -14,8 +12,6 @@ interface IIdentityRegistry {
 }
 
 contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
-    using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     event NewFeedback(
         uint256 indexed agentId,

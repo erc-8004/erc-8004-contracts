@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 interface IIdentityRegistry {
@@ -16,8 +14,6 @@ interface IIdentityRegistry {
 /// - Emits NewFeedback / FeedbackRevoked / ResponseAppended
 /// - Stores small amount of data so we can deploy & test now
 contract ReputationRegistry {
-    using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     address private immutable identityRegistry;
 
