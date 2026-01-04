@@ -197,6 +197,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata tag1,
         string calldata tag2
     ) external view returns (uint64 count, uint8 averageScore) {
+
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         address[] memory clientList;
         if (clientAddresses.length > 0) {
@@ -208,15 +209,18 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint256 totalScore = 0;
         count = 0;
 
+        bytes32 emptyHash = keccak256(bytes(""));
+        bytes32 tag1Hash = keccak256(bytes(tag1));
+        bytes32 tag2Hash = keccak256(bytes(tag2));
         for (uint256 i = 0; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
-                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
-                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash &&
+                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash &&
+                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalScore += fb.score;
                 count++;
             }
@@ -247,16 +251,19 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // First pass: count matching feedback
+        bytes32 emptyHash = keccak256(bytes(""));
+        bytes32 tag1Hash = keccak256(bytes(tag1));
+        bytes32 tag2Hash = keccak256(bytes(tag2));
         uint256 totalCount = 0;
         for (uint256 i = 0; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
-                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
-                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash &&
+                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash &&
+                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalCount++;
             }
         }
@@ -275,10 +282,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag1)) &&
-                    keccak256(bytes(tag1)) != keccak256(bytes(fb.tag1))) continue;
-                if (keccak256(bytes("")) != keccak256(bytes(tag2)) &&
-                    keccak256(bytes(tag2)) != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash &&
+                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash &&
+                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
                 scores[idx] = fb.score;
