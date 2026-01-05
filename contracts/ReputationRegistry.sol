@@ -47,7 +47,6 @@ contract ReputationRegistry {
         uint8 score;
         string tag1;
         string tag2;
-        string endpoint;
         bool isRevoked;
     }
 
@@ -111,7 +110,6 @@ contract ReputationRegistry {
             score: score,
             tag1: tag1,
             tag2: tag2,
-            endpoint: endpoint,
             isRevoked: false
         });
 
@@ -166,12 +164,12 @@ contract ReputationRegistry {
     function readFeedback(uint256 agentId, address clientAddress, uint64 index)
         external
         view
-        returns (uint8 score, string memory tag1, string memory tag2, string memory endpoint, bool isRevoked)
+        returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
     {
         require(index > 0, "index must be > 0");
         require(index <= _lastIndex[agentId][clientAddress], "index out of bounds");
         Feedback storage f = _feedback[agentId][clientAddress][index];
-        return (f.score, f.tag1, f.tag2, f.endpoint, f.isRevoked);
+        return (f.score, f.tag1, f.tag2, f.isRevoked);
     }
 
     function getSummary(
