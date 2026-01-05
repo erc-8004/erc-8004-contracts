@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
-import { encodeAbiParameters, getAddress, keccak256, toHex } from "viem";
+import { encodeAbiParameters, keccak256, toHex } from "viem";
 
 describe("ERC8004 Upgradeable Registries", async function () {
   const { viem } = await network.connect();
@@ -209,7 +209,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Give feedback with V1
       await reputationRegistry.write.giveFeedback(
-        [agentId, 95, "quality", "service", "ipfs://feedback", keccak256(toHex("content"))],
+        [agentId, 95, "quality", "service", "https://agent.endpoint.com", "ipfs://feedback", keccak256(toHex("content"))],
         { account: client.account }
       );
 
@@ -538,7 +538,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
         // Helper to create feedback
         async function giveFeedback(agentId: bigint, client: any, score: number, category: string) {
           await reputationRegistry.write.giveFeedback(
-            [agentId, score, category, "service", `ipfs://feedback-${category}`, keccak256(toHex("content"))],
+            [agentId, score, category, "service", "https://agent.endpoint.com", `ipfs://feedback-${category}`, keccak256(toHex("content"))],
             { account: client.account }
           );
         }

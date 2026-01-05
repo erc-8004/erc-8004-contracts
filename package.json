@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test:core": "node --import tsx --test test/ERC8004.ts",
-    "test:upgradeable": "node --import tsx --test test/ERC8004Upgradeable.ts",
+    "test:core": "node --import tsx --test test/core.ts",
+    "test:upgradeable": "node --import tsx --test test/upgradeable.ts",
     "test": "npm run test:core && npm run test:upgradeable",
-    "local:test": "node --import tsx --test test/ERC8004Deployed.ts",
+    "local:test": "node --import tsx --test test/local.ts",
     "node": "npx hardhat node",
     "local": "npm run local:factory && npm run local:minimal-uups && npm run local:vanity",
     "local:factory": "npx hardhat run scripts/deploy-create2-factory.ts --network localhost",
