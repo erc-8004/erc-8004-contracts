@@ -1,8 +1,7 @@
 import hre from "hardhat";
-import { getCreate2Address, encodeAbiParameters, encodeFunctionData, keccak256, Hex } from "viem";
+import { getCreate2Address, encodeFunctionData, keccak256, Hex, encodeAbiParameters } from "viem";
 import { Worker } from "worker_threads";
 import * as os from "os";
-import * as path from "path";
 
 /**
  * SAFE Singleton CREATE2 Factory address
@@ -10,7 +9,7 @@ import * as path from "path";
 const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
 
 /**
- * MinimalUUPS salt (will calculate address since bytecode changed)
+ * Salt for MinimalUUPS deployment (single instance for all registries)
  */
 const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
 
@@ -156,16 +155,18 @@ async function main() {
   console.log(`System has ${numWorkers} CPU cores`);
   console.log("");
 
-  // Calculate MinimalUUPS address (bytecode changed with new initialize signature)
+  // Calculate MinimalUUPS address (single instance)
   console.log("Step 0: Calculating MinimalUUPS address...");
   const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
   const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
+
   const minimalUUPSAddress = getCreate2Address({
     from: SAFE_SINGLETON_FACTORY,
     salt: MINIMAL_UUPS_SALT,
     bytecodeHash: keccak256(minimalUUPSBytecode),
   });
-  console.log(`✅ MinimalUUPS will be at: ${minimalUUPSAddress}`);
+
+  console.log(`✅ MinimalUUPS: ${minimalUUPSAddress}`);
   console.log("");
 
   // Find salt for IdentityRegistry proxy (0x8004A)
@@ -241,10 +242,9 @@ async function main() {
   console.log("");
   console.log("=".repeat(80));
   console.log("Next steps:");
-  console.log("1. Update MINIMAL_UUPS_ADDRESS in scripts/deploy-vanity.ts");
-  console.log("2. Update VANITY_SALTS in scripts/deploy-vanity.ts");
-  console.log("3. Update EXPECTED_ADDRESSES in scripts/deploy-vanity.ts");
-  console.log("4. Update scripts/upgrade-vanity.ts and verify-vanity.ts with new addresses");
+  console.log("1. Update VANITY_SALTS in scripts/deploy-vanity.ts");
+  console.log("2. Update EXPECTED_ADDRESSES in scripts/deploy-vanity.ts");
+  console.log("3. Update scripts/verify-vanity.ts with new addresses");
   console.log("");
 
   return {

@@ -1,6 +1,20 @@
 import hre from "hardhat";
-import { Hex } from "viem";
+import { Hex, keccak256, getCreate2Address } from "viem";
 import fs from "fs";
+
+/**
+ * SAFE Singleton CREATE2 Factory address
+ */
+const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
+
+/**
+ * Salts for implementation contracts (must match deploy-vanity.ts)
+ */
+const IMPLEMENTATION_SALTS = {
+  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
+  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
+} as const;
 
 /**
  * Upgrade vanity proxies using PRE-EXISTING pre-signed transactions
@@ -26,19 +40,40 @@ async function main() {
   console.log("Deployer:", deployer.account.address);
   console.log("");
 
-  // Expected contracts (hardcoded, matches generate script)
+  // Calculate implementation addresses via CREATE2
+  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
+  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
+  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
+
+  const identityImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.identityRegistry,
+    bytecodeHash: keccak256(identityImplArtifact.bytecode as Hex),
+  });
+  const reputationImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.reputationRegistry,
+    bytecodeHash: keccak256(reputationImplArtifact.bytecode as Hex),
+  });
+  const validationImplAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.validationRegistry,
+    bytecodeHash: keccak256(validationImplArtifact.bytecode as Hex),
+  });
+
+  // Expected contracts with calculated implementation addresses
   const EXPECTED_IMPLEMENTATIONS = {
-    "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997": {
+    "0x8004A818BFB912233c491871b3d84c89A494BD9e": {
       name: "IdentityRegistry",
-      implementation: "0x5B1e1fbACf33Cca26Eb8da79918EE8544eA1CF13",
+      implementation: identityImplAddress,
     },
-    "0x8004B312333aCb5764597c2BeEe256596B5C6876": {
+    "0x8004B663056A597Dffe9eCcC1965A193B7388713": {
       name: "ReputationRegistry",
-      implementation: "0x11E6Aed2BC5a1370352010a40ba0Df533887DcA2",
+      implementation: reputationImplAddress,
     },
-    "0x8004C8AEF64521bC97AB50799d394CDb785885E3": {
+    "0x8004Cb1BF31DAf7788923b405b754f57acEB4272": {
       name: "ValidationRegistry",
-      implementation: "0x34A8244cfCF50433FEE0263EF54649dd85eAD2C4",
+      implementation: validationImplAddress,
     },
   };
 

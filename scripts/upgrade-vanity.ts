@@ -9,18 +9,18 @@ dotenv.config();
  * Expected vanity proxy addresses (deterministic across all networks)
  */
 const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997",
-  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876",
-  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3",
+  identityRegistry: "0x8004A447dc6c917E1bcF82e9a99cfB4fD234CD25",
+  reputationRegistry: "0x8004BcCb56C627d615B51b8f85Ef2285E12C482D",
+  validationRegistry: "0x8004C6ABFc5d8Eb2cb31AFb47dEb986EdE455f52",
 } as const;
 
 /**
  * Implementation addresses (deployed via CREATE2, deterministic across all networks)
  */
 const IMPLEMENTATION_ADDRESSES = {
-  identityRegistry: "0x5B1e1fbACf33Cca26Eb8da79918EE8544eA1CF13",
-  reputationRegistry: "0x11E6Aed2BC5a1370352010a40ba0Df533887DcA2",
-  validationRegistry: "0x34A8244cfCF50433FEE0263EF54649dd85eAD2C4",
+  identityRegistry: "0x4AAC8c0A22a029977Ecc39459DA753e1E5e48315",
+  reputationRegistry: "0x29Bd7Cff6C1A31E06b58ad960b1B6c3977DdFA8C",
+  validationRegistry: "0xc0dBF87126d203AEa49fbFd59e4DCaBf56608Ce9",
 } as const;
 
 /**

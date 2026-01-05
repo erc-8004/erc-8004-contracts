@@ -46,9 +46,11 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool isRevoked;
     }
 
+    /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
+    address private _identityRegistry;
+
     /// @custom:storage-location erc7201:erc8004.reputation.registry
     struct ReputationRegistryStorage {
-        address identityRegistry;
         // agentId => clientAddress => feedbackIndex => Feedback (1-indexed)
         mapping(uint256 => mapping(address => mapping(uint64 => Feedback))) _feedback;
         // agentId => clientAddress => last feedback index
@@ -78,17 +80,15 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _identityRegistry) public initializer {
-        require(_identityRegistry != address(0), "bad identity");
+    function initialize(address identityRegistry_) public initializer {
+        require(identityRegistry_ != address(0), "bad identity");
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        $.identityRegistry = _identityRegistry;
+        _identityRegistry = identityRegistry_;
     }
 
     function getIdentityRegistry() external view returns (address) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        return $.identityRegistry;
+        return _identityRegistry;
     }
 
     function giveFeedback(
@@ -108,7 +108,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         require(_agentExists(agentId), "Agent does not exist");
 
         // Get agent owner
-        IIdentityRegistry registry = IIdentityRegistry($.identityRegistry);
+        IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
         address agentOwner = registry.ownerOf(agentId);
 
         // SECURITY: Prevent self-feedback from owner and operators
@@ -354,8 +354,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function _agentExists(uint256 agentId) internal view returns (bool) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        try IIdentityRegistry($.identityRegistry).ownerOf(agentId) returns (address owner) {
+        try IIdentityRegistry(_identityRegistry).ownerOf(agentId) returns (address owner) {
             return owner != address(0);
         } catch {
             return false;

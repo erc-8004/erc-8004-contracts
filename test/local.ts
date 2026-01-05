@@ -7,9 +7,9 @@ import { getAddress, keccak256, toHex, Hex } from "viem";
  * Deployed vanity addresses (deterministic CREATE2 addresses)
  */
 const DEPLOYED_ADDRESSES = {
-  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997" as const,
-  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876" as const,
-  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3" as const,
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e" as const,
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713" as const,
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272" as const,
 };
 
 describe("ERC8004 Registries", async function () {
@@ -147,7 +147,7 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const key = "agentWallet";
+      const key = "paymentWallet";
       const value = toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7");
 
       // Set metadata
@@ -185,15 +185,15 @@ describe("ERC8004 Registries", async function () {
 
       const tokenURI = "ipfs://agent-with-metadata";
       const metadata = [
-        { metadataKey: "agentWallet", metadataValue: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7" },
-        { metadataKey: "agentName", metadataValue: "MyAgent" }
+        { metadataKey: "paymentWallet", metadataValue: toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7") },
+        { metadataKey: "agentName", metadataValue: toHex("MyAgent") }
       ];
 
       const txHash = await identityRegistry.write.register([tokenURI, metadata]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       // Verify metadata was set
-      const wallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
+      const wallet = await identityRegistry.read.getMetadata([agentId, "paymentWallet"]);
       const name = await identityRegistry.read.getMetadata([agentId, "agentName"]);
 
       assert.equal(wallet, metadata[0].metadataValue);
@@ -251,6 +251,7 @@ describe("ERC8004 Registries", async function () {
       const score = 85;
       const tag1 = "quality";
       const tag2 = "speed";
+      const endpoint = "https://agent.example.com/";
       const fileuri = "ipfs://feedback1";
       const filehash = keccak256(toHex("feedback content"));
 
@@ -260,12 +261,13 @@ describe("ERC8004 Registries", async function () {
           score,
           tag1,
           tag2,
+          endpoint,
           fileuri,
           filehash,
         ], { account: client.account }),
         reputationRegistry,
         "NewFeedback",
-        [agentId, getAddress(client.account.address), score, keccak256(toHex(tag1)), tag2, fileuri, filehash]
+        [agentId, getAddress(client.account.address), score, keccak256(toHex(tag1)), tag2, endpoint, fileuri, filehash]
       );
 
       // Read feedback back (use 1-based index)
@@ -294,6 +296,7 @@ describe("ERC8004 Registries", async function () {
         90,
         "tag1",
         "tag2",
+        "https://agent.example.com/",
         "ipfs://feedback",
         keccak256(toHex("content")),
       ], { account: client.account });
@@ -328,6 +331,7 @@ describe("ERC8004 Registries", async function () {
         75,
         "tag1",
         "tag2",
+        "https://agent.example.com/",
         "ipfs://feedback",
         keccak256(toHex("content")),
       ], { account: client.account });
@@ -361,6 +365,7 @@ describe("ERC8004 Registries", async function () {
           80 + i,
           "tag1",
           "tag2",
+          "https://agent.example.com/",
           `ipfs://feedback${i}`,
           keccak256(toHex(`content${i}`)),
         ], { account: client.account });
@@ -396,6 +401,7 @@ describe("ERC8004 Registries", async function () {
           85,
           "tag1",
           "tag2",
+          "https://agent.example.com/",
           "ipfs://feedback",
           keccak256(toHex("content")),
         ])
@@ -417,6 +423,7 @@ describe("ERC8004 Registries", async function () {
           101,
           "tag1",
           "tag2",
+          "https://agent.example.com/",
           "ipfs://feedback",
           keccak256(toHex("content")),
         ])
@@ -440,6 +447,7 @@ describe("ERC8004 Registries", async function () {
         0,
         "tag1",
         "tag2",
+        "https://agent.example.com/",
         "ipfs://feedback",
         keccak256(toHex("content")),
       ], { account: client.account });
@@ -465,6 +473,7 @@ describe("ERC8004 Registries", async function () {
         100,
         "tag1",
         "tag2",
+        "https://agent.example.com/",
         "ipfs://feedback",
         keccak256(toHex("content")),
       ], { account: client.account });
@@ -489,6 +498,7 @@ describe("ERC8004 Registries", async function () {
             95,
             "tag1",
             "tag2",
+            "https://agent.example.com/",
             "ipfs://feedback",
             keccak256(toHex("content")),
           ], { account: agentOwner.account });
@@ -510,15 +520,15 @@ describe("ERC8004 Registries", async function () {
 
       // Client 1 gives 2 feedbacks
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, tag1, tag2, "ipfs://f1", keccak256(toHex("c1"))
+        agentId, 80, tag1, tag2, "https://agent.example.com/", "ipfs://f1", keccak256(toHex("c1"))
       ], { account: client1.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, tag1, tag2, "ipfs://f2", keccak256(toHex("c2"))
+        agentId, 90, tag1, tag2, "https://agent.example.com/", "ipfs://f2", keccak256(toHex("c2"))
       ], { account: client1.account });
 
       // Client 2 gives 1 feedback
       await reputationRegistry.write.giveFeedback(
-        [agentId, 100, tag1, tag2, "ipfs://f3", keccak256(toHex("c3"))],
+        [agentId, 100, tag1, tag2, "https://agent.example.com/", "ipfs://f3", keccak256(toHex("c3"))],
         { account: client2.account }
       );
 
@@ -547,9 +557,9 @@ describe("ERC8004 Registries", async function () {
       const tagC = "tagC";
 
       // Give feedbacks with different tags
-      await reputationRegistry.write.giveFeedback([agentId, 80, tagA, tagB, "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
-      await reputationRegistry.write.giveFeedback([agentId, 90, tagA, tagC, "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
-      await reputationRegistry.write.giveFeedback([agentId, 100, tagB, tagC, "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
+      await reputationRegistry.write.giveFeedback([agentId, 80, tagA, tagB, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
+      await reputationRegistry.write.giveFeedback([agentId, 90, tagA, tagC, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
+      await reputationRegistry.write.giveFeedback([agentId, 100, tagB, tagC, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client.account });
 
       // Filter by tagA and tagB (exact match required)
       const summaryA = await reputationRegistry.read.getSummary([agentId, [client.account.address], tagA, tagB]);
@@ -568,12 +578,12 @@ describe("ERC8004 Registries", async function () {
       const tag1 = "quality";
 
       // Client1: 2 feedbacks
-      await reputationRegistry.write.giveFeedback([agentId, 80, tag1, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client1.account });
-      await reputationRegistry.write.giveFeedback([agentId, 90, tag1, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client1.account });
+      await reputationRegistry.write.giveFeedback([agentId, 80, tag1, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client1.account });
+      await reputationRegistry.write.giveFeedback([agentId, 90, tag1, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"], { account: client1.account });
 
       // Client2: 1 feedback
       await reputationRegistry.write.giveFeedback(
-        [agentId, 100, tag1, "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
+        [agentId, 100, tag1, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
         { account: client2.account }
       );
 
@@ -603,7 +613,7 @@ describe("ERC8004 Registries", async function () {
       // Give feedback
       await reputationRegistry.write.giveFeedback([
         agentId, 85, "",
-        "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Append 2 responses from different responders (use 1-based index)
@@ -643,20 +653,20 @@ describe("ERC8004 Registries", async function () {
       // Client1 gives feedback
       await reputationRegistry.write.giveFeedback([
         agentId, 80, "",
-        "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client1.account });
 
       // Client2 gives feedback
       await reputationRegistry.write.giveFeedback(
         [agentId, 90, "",
-        "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
+        "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
         { account: client2.account }
       );
 
       // Client3 gives feedback
       await reputationRegistry.write.giveFeedback(
         [agentId, 95, "",
-        "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
+        "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"],
         { account: client3.account }
       );
 
@@ -681,13 +691,13 @@ describe("ERC8004 Registries", async function () {
 
       // Give 3 feedbacks with different tag1 values
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "quality", "service", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "quality", "service", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "speed", "service", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "speed", "service", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 100, "reliability", "service", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 100, "reliability", "service", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Filter with empty string for tag1 (wildcard) and specific tag2
@@ -713,13 +723,13 @@ describe("ERC8004 Registries", async function () {
 
       // Give 3 feedbacks with different tag2 values
       await reputationRegistry.write.giveFeedback([
-        agentId, 70, "quality", "fast", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 70, "quality", "fast", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "quality", "slow", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "quality", "slow", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "quality", "medium", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "quality", "medium", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Filter with specific tag1 and wildcard for tag2
@@ -745,13 +755,13 @@ describe("ERC8004 Registries", async function () {
 
       // Give 3 feedbacks with completely different tags
       await reputationRegistry.write.giveFeedback([
-        agentId, 60, "quality", "fast", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 60, "quality", "fast", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "speed", "slow", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "speed", "slow", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 100, "reliability", "medium", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 100, "reliability", "medium", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Filter with wildcards for both tags
@@ -777,13 +787,13 @@ describe("ERC8004 Registries", async function () {
 
       // Give 3 feedbacks with different tags
       await reputationRegistry.write.giveFeedback([
-        agentId, 70, "quality", "fast", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 70, "quality", "fast", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "speed", "slow", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "speed", "slow", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "reliability", "medium", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "reliability", "medium", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Read all with wildcard for both tags
@@ -817,12 +827,12 @@ describe("ERC8004 Registries", async function () {
 
       // Client1 gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client1.account });
 
       // Client2 gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client2.account });
 
       // Responder1 responds to both feedbacks
@@ -859,10 +869,10 @@ describe("ERC8004 Registries", async function () {
 
       // Client gives 2 feedbacks
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Responders respond to both
@@ -894,7 +904,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Two responders respond
@@ -926,7 +936,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Three responders respond
@@ -974,21 +984,21 @@ describe("ERC8004 Registries", async function () {
 
       // Give 3 feedbacks
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       let lastIndex = await reputationRegistry.read.getLastIndex([agentId, client.account.address]);
       assert.equal(lastIndex, 1n);
 
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       lastIndex = await reputationRegistry.read.getLastIndex([agentId, client.account.address]);
       assert.equal(lastIndex, 2n);
 
       await reputationRegistry.write.giveFeedback([
-        agentId, 100, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 100, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       lastIndex = await reputationRegistry.read.getLastIndex([agentId, client.account.address]);
@@ -1005,10 +1015,10 @@ describe("ERC8004 Registries", async function () {
 
       // Give 2 feedbacks
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "quality", "fast", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "quality", "fast", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "speed", "slow", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "speed", "slow", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Read first feedback
@@ -1040,7 +1050,7 @@ describe("ERC8004 Registries", async function () {
 
       // Give only 1 feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Try to read index 2 (doesn't exist)
@@ -1064,7 +1074,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Same responder responds multiple times
@@ -1101,7 +1111,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client.account });
 
       // Revoke the feedback
@@ -1141,7 +1151,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client1 gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 80, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 80, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client1.account });
 
       clients = await reputationRegistry.read.getClients([agentId]);
@@ -1150,7 +1160,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client2 gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 90, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 90, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client2.account });
 
       clients = await reputationRegistry.read.getClients([agentId]);
@@ -1158,7 +1168,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client1 gives another feedback (should NOT duplicate)
       await reputationRegistry.write.giveFeedback([
-        agentId, 85, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 85, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client1.account });
 
       clients = await reputationRegistry.read.getClients([agentId]);
@@ -1166,7 +1176,7 @@ describe("ERC8004 Registries", async function () {
 
       // Client3 gives feedback
       await reputationRegistry.write.giveFeedback([
-        agentId, 95, "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
+        agentId, 95, "", "", "", "", "0x0000000000000000000000000000000000000000000000000000000000000000"
       ], { account: client3.account });
 
       clients = await reputationRegistry.read.getClients([agentId]);
@@ -1205,7 +1215,7 @@ describe("ERC8004 Registries", async function () {
       );
 
       // Check status was created
-      const status = await validationRegistry.read.validations([requestHash]);
+      const status = await validationRegistry.read.getValidationStatus([requestHash]);
       assert.equal(status[0].toLowerCase(), validator.account.address.toLowerCase()); // validatorAddress
       assert.equal(status[1], agentId); // agentId
       assert.equal(status[2], 0); // response (initial)

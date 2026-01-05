@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { encodeFunctionData, Hex, parseGwei } from "viem";
+import { encodeFunctionData, Hex, parseGwei, keccak256, getCreate2Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import dotenv from "dotenv";
 import fs from "fs";
@@ -8,21 +8,26 @@ import fs from "fs";
 dotenv.config();
 
 /**
- * Expected vanity proxy addresses
+ * SAFE Singleton CREATE2 Factory address
  */
-const PROXIES = {
-  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997",
-  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876",
-  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3",
+const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
+
+/**
+ * Salts for implementation contracts (must match deploy-vanity.ts)
+ */
+const IMPLEMENTATION_SALTS = {
+  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
+  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
 } as const;
 
 /**
- * Implementation addresses
+ * Expected vanity proxy addresses
  */
-const IMPLEMENTATIONS = {
-  identityRegistry: "0x5B1e1fbACf33Cca26Eb8da79918EE8544eA1CF13",
-  reputationRegistry: "0x11E6Aed2BC5a1370352010a40ba0Df533887DcA2",
-  validationRegistry: "0x34A8244cfCF50433FEE0263EF54649dd85eAD2C4",
+const PROXIES = {
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
 } as const;
 
 /**
@@ -38,6 +43,35 @@ async function main() {
   console.log("Generating 3 Pre-Signed Upgrade Transactions");
   console.log("=".repeat(80));
   console.log("Chain ID:", chainId);
+  console.log("");
+
+  // Calculate implementation addresses via CREATE2
+  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
+  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
+  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
+
+  const IMPLEMENTATIONS = {
+    identityRegistry: getCreate2Address({
+      from: SAFE_SINGLETON_FACTORY,
+      salt: IMPLEMENTATION_SALTS.identityRegistry,
+      bytecodeHash: keccak256(identityImplArtifact.bytecode as Hex),
+    }),
+    reputationRegistry: getCreate2Address({
+      from: SAFE_SINGLETON_FACTORY,
+      salt: IMPLEMENTATION_SALTS.reputationRegistry,
+      bytecodeHash: keccak256(reputationImplArtifact.bytecode as Hex),
+    }),
+    validationRegistry: getCreate2Address({
+      from: SAFE_SINGLETON_FACTORY,
+      salt: IMPLEMENTATION_SALTS.validationRegistry,
+      bytecodeHash: keccak256(validationImplArtifact.bytecode as Hex),
+    }),
+  };
+
+  console.log("Implementation addresses (calculated via CREATE2):");
+  console.log("  IdentityRegistry:  ", IMPLEMENTATIONS.identityRegistry);
+  console.log("  ReputationRegistry:", IMPLEMENTATIONS.reputationRegistry);
+  console.log("  ValidationRegistry:", IMPLEMENTATIONS.validationRegistry);
   console.log("");
 
   // Get owner private key

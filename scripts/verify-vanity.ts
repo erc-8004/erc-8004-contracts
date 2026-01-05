@@ -4,9 +4,9 @@ import hre from "hardhat";
  * Expected vanity proxy addresses (deterministic across all networks)
  */
 const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997",
-  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876",
-  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3",
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
 } as const;
 
 /**

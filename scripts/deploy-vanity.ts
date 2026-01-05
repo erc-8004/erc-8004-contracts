@@ -11,36 +11,35 @@ dotenv.config();
 const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
 
 /**
- * MinimalUUPS address (deployed via CREATE2 with salt 0x01)
+ * Salt for MinimalUUPS deployment (single instance for all registries)
  */
-const MINIMAL_UUPS_ADDRESS = "0xF8AD590D320f6b5b43A11033cFdFC3eB588Fbf4a" as const;
 const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
 
 /**
  * Vanity salts for proxies (pointing to MinimalUUPS initially)
  */
 const VANITY_SALTS = {
-  identityRegistry: "0x000000000000000000000000000000000000000000000000000000000008bc6f" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000b93e81" as Hex,
-  validationRegistry: "0x00000000000000000000000000000000000000000000000000000000001b4463" as Hex,
+  identityRegistry: "0x000000000000000000000000000000000000000000000000000000000053bcdc" as Hex,
+  reputationRegistry: "0x00000000000000000000000000000000000000000000000000000000003029ea" as Hex,
+  validationRegistry: "0x000000000000000000000000000000000000000000000000000000000027f902" as Hex,
 } as const;
 
 /**
  * Salts for implementation contracts (deployed via CREATE2)
  */
 const IMPLEMENTATION_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000002" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000003" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000004" as Hex,
+  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
+  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
 } as const;
 
 /**
  * Expected vanity proxy addresses
  */
 const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004AbdDA9b877187bF865eD1d8B5A41Da3c4997",
-  reputationRegistry: "0x8004B312333aCb5764597c2BeEe256596B5C6876",
-  validationRegistry: "0x8004C8AEF64521bC97AB50799d394CDb785885E3",
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
 } as const;
 
 /**
@@ -107,34 +106,38 @@ async function main() {
   console.log("");
 
   // ============================================================================
-  // PHASE 1: Deploy MinimalUUPS placeholder via CREATE2
+  // PHASE 1: Deploy MinimalUUPS placeholder via CREATE2 (single instance)
   // ============================================================================
 
   console.log("PHASE 1: Deploying MinimalUUPS Placeholder via CREATE2");
   console.log("=======================================================");
   console.log("");
 
-  // Check if MinimalUUPS already exists
-  const minimalUUPSCode = await publicClient.getBytecode({
-    address: MINIMAL_UUPS_ADDRESS,
+  const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
+  const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
+
+  // Calculate MinimalUUPS address
+  const minimalUUPSAddress = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: MINIMAL_UUPS_SALT,
+    bytecodeHash: keccak256(minimalUUPSBytecode),
   });
 
+  const minimalUUPSCode = await publicClient.getBytecode({ address: minimalUUPSAddress });
+
   if (!minimalUUPSCode || minimalUUPSCode === "0x") {
-    console.log("1. Deploying MinimalUUPS via CREATE2...");
-    const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
-    const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
-    const minimalUUPSDeployData = (MINIMAL_UUPS_SALT + minimalUUPSBytecode.slice(2)) as Hex;
+    console.log("Deploying MinimalUUPS...");
+    const deployData = (MINIMAL_UUPS_SALT + minimalUUPSBytecode.slice(2)) as Hex;
 
-    const minimalUUPSTxHash = await deployer.sendTransaction({
+    const txHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
-      data: minimalUUPSDeployData,
+      data: deployData,
     });
-    await publicClient.waitForTransactionReceipt({ hash: minimalUUPSTxHash });
-
-    console.log(`   ✅ Deployed at: ${MINIMAL_UUPS_ADDRESS}`);
+    await publicClient.waitForTransactionReceipt({ hash: txHash });
+    console.log(`   ✅ Deployed at: ${minimalUUPSAddress}`);
   } else {
-    console.log("1. MinimalUUPS already deployed");
-    console.log(`   ✅ Found at: ${MINIMAL_UUPS_ADDRESS}`);
+    console.log("MinimalUUPS already deployed");
+    console.log(`   ✅ Found at: ${minimalUUPSAddress}`);
   }
   console.log("");
 
@@ -145,9 +148,6 @@ async function main() {
   console.log("PHASE 2: Deploying Vanity Proxies");
   console.log("==================================");
   console.log("");
-
-  // Get MinimalUUPS artifact for initialization
-  const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
 
   // Deploy IdentityRegistry proxy - initialize with zero address (doesn't need identityRegistry)
   const identityProxyAddress = EXPECTED_ADDRESSES.identityRegistry as `0x${string}`;
@@ -162,7 +162,7 @@ async function main() {
       functionName: "initialize",
       args: ["0x0000000000000000000000000000000000000000" as `0x${string}`]
     });
-    const identityProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, identityInitData);
+    const identityProxyBytecode = await getProxyBytecode(minimalUUPSAddress, identityInitData);
     const identityProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
       data: (VANITY_SALTS.identityRegistry + identityProxyBytecode.slice(2)) as Hex,
@@ -188,7 +188,7 @@ async function main() {
       functionName: "initialize",
       args: [identityProxyAddress]
     });
-    const reputationProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, reputationInitData);
+    const reputationProxyBytecode = await getProxyBytecode(minimalUUPSAddress, reputationInitData);
     const reputationProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
       data: (VANITY_SALTS.reputationRegistry + reputationProxyBytecode.slice(2)) as Hex,
@@ -214,7 +214,7 @@ async function main() {
       functionName: "initialize",
       args: [identityProxyAddress]
     });
-    const validationProxyBytecode = await getProxyBytecode(MINIMAL_UUPS_ADDRESS, validationInitData);
+    const validationProxyBytecode = await getProxyBytecode(minimalUUPSAddress, validationInitData);
     const validationProxyTxHash = await deployer.sendTransaction({
       to: SAFE_SINGLETON_FACTORY,
       data: (VANITY_SALTS.validationRegistry + validationProxyBytecode.slice(2)) as Hex,

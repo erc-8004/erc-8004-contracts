@@ -38,9 +38,11 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool hasResponse;
     }
 
+    /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
+    address private _identityRegistry;
+
     /// @custom:storage-location erc7201:erc8004.validation.registry
     struct ValidationRegistryStorage {
-        address identityRegistry;
         // requestHash => validation status
         mapping(bytes32 => ValidationStatus) validations;
         // agentId => list of requestHashes
@@ -64,17 +66,15 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _identityRegistry) public initializer {
-        require(_identityRegistry != address(0), "bad identity");
+    function initialize(address identityRegistry_) public initializer {
+        require(identityRegistry_ != address(0), "bad identity");
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        $.identityRegistry = _identityRegistry;
+        _identityRegistry = identityRegistry_;
     }
 
     function getIdentityRegistry() external view returns (address) {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        return $.identityRegistry;
+        return _identityRegistry;
     }
 
     function validationRequest(
@@ -88,7 +88,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         require($.validations[requestHash].validatorAddress == address(0), "exists");
 
         // Check permission: caller must be owner or approved operator
-        IIdentityRegistry registry = IIdentityRegistry($.identityRegistry);
+        IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
         address owner = registry.ownerOf(agentId);
         require(
             msg.sender == owner ||
