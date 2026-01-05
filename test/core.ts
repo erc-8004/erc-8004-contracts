@@ -172,7 +172,7 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const key = "agentWallet";
+      const key = "customKey";
       const value = toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7");
 
       // Set metadata
@@ -210,7 +210,7 @@ describe("ERC8004 Registries", async function () {
 
       const tokenURI = "ipfs://agent-with-metadata";
       const metadata = [
-        { metadataKey: "agentWallet", metadataValue: toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7") },
+        { metadataKey: "paymentAddress", metadataValue: toHex("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7") },
         { metadataKey: "agentName", metadataValue: toHex("MyAgent") }
       ];
 
@@ -218,10 +218,10 @@ describe("ERC8004 Registries", async function () {
       const agentId = await getAgentIdFromRegistration(txHash);
 
       // Verify metadata was set
-      const wallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
+      const paymentAddr = await identityRegistry.read.getMetadata([agentId, "paymentAddress"]);
       const name = await identityRegistry.read.getMetadata([agentId, "agentName"]);
 
-      assert.equal(wallet, metadata[0].metadataValue);
+      assert.equal(paymentAddr, metadata[0].metadataValue);
       assert.equal(name, metadata[1].metadataValue);
     });
 
