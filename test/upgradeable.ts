@@ -397,6 +397,71 @@ describe("ERC8004 Upgradeable Registries", async function () {
       );
     });
 
+    it("Should clear agentWallet on transfer", async function () {
+      const [owner, newWalletSigner, newOwner] = await viem.getWalletClients();
+
+      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
+      const proxy = await deployProxy(impl.address, encodeInitialize());
+      const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+
+      // Register agent
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Set agentWallet
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      // Verify agentWallet is set
+      const walletBefore = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(walletBefore.toLowerCase(), newWalletSigner.account.address.toLowerCase());
+
+      // Transfer token to new owner
+      await identityRegistry.write.transferFrom(
+        [owner.account.address, newOwner.account.address, agentId],
+        { account: owner.account }
+      );
+
+      // Verify agentWallet is cleared
+      const walletAfter = await identityRegistry.read.getAgentWallet([agentId]);
+      assert.equal(walletAfter, "0x0000000000000000000000000000000000000000");
+
+      // Verify metadata is also cleared
+      const metadataWallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
+      assert.equal(metadataWallet, "0x");
+    });
+
     it("Should upgrade to new implementation", async function () {
       const [owner] = await viem.getWalletClients();
 

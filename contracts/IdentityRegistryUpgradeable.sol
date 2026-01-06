@@ -167,6 +167,27 @@ contract IdentityRegistryUpgradeable is
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    /**
+     * @dev Override _update to clear agentWallet on transfer.
+     * This ensures the verified wallet doesn't persist to new owners.
+     */
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+        address from = _ownerOf(tokenId);
+
+        // Call parent implementation
+        address result = super._update(to, tokenId, auth);
+
+        // If this is a transfer (not mint), clear agentWallet
+        if (from != address(0) && to != address(0)) {
+            IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+            $._agentWallet[tokenId] = address(0);
+            $._metadata[tokenId]["agentWallet"] = "";
+            emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
+        }
+
+        return result;
+    }
+
     function getVersion() external pure returns (string memory) {
         return "1.1.0";
     }
