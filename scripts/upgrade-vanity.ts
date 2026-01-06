@@ -1,26 +1,31 @@
 import hre from "hardhat";
-import { encodeFunctionData, Hex } from "viem";
+import { encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
 import dotenv from "dotenv";
 
 // Load environment variables from .env file
 dotenv.config();
 
 /**
- * Expected vanity proxy addresses (deterministic across all networks)
+ * SAFE Singleton CREATE2 Factory address
  */
-const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004A447dc6c917E1bcF82e9a99cfB4fD234CD25",
-  reputationRegistry: "0x8004BcCb56C627d615B51b8f85Ef2285E12C482D",
-  validationRegistry: "0x8004C6ABFc5d8Eb2cb31AFb47dEb986EdE455f52",
+const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
+
+/**
+ * Salts for implementation contracts (must match deploy-vanity.ts)
+ */
+const IMPLEMENTATION_SALTS = {
+  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
+  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
+  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
 } as const;
 
 /**
- * Implementation addresses (deployed via CREATE2, deterministic across all networks)
+ * Expected vanity proxy addresses (deterministic across all networks)
  */
-const IMPLEMENTATION_ADDRESSES = {
-  identityRegistry: "0x4AAC8c0A22a029977Ecc39459DA753e1E5e48315",
-  reputationRegistry: "0x29Bd7Cff6C1A31E06b58ad960b1B6c3977DdFA8C",
-  validationRegistry: "0xc0dBF87126d203AEa49fbFd59e4DCaBf56608Ce9",
+const EXPECTED_ADDRESSES = {
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
 } as const;
 
 /**
@@ -70,9 +75,26 @@ async function main() {
   console.log("Owner address:", ownerAccount.address);
   console.log("");
 
-  const identityImpl = IMPLEMENTATION_ADDRESSES.identityRegistry as `0x${string}`;
-  const reputationImpl = IMPLEMENTATION_ADDRESSES.reputationRegistry as `0x${string}`;
-  const validationImpl = IMPLEMENTATION_ADDRESSES.validationRegistry as `0x${string}`;
+  // Calculate implementation addresses via CREATE2
+  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
+  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
+  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
+
+  const identityImpl = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.identityRegistry,
+    bytecodeHash: keccak256(identityImplArtifact.bytecode as Hex),
+  });
+  const reputationImpl = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.reputationRegistry,
+    bytecodeHash: keccak256(reputationImplArtifact.bytecode as Hex),
+  });
+  const validationImpl = getCreate2Address({
+    from: SAFE_SINGLETON_FACTORY,
+    salt: IMPLEMENTATION_SALTS.validationRegistry,
+    bytecodeHash: keccak256(validationImplArtifact.bytecode as Hex),
+  });
 
   console.log("Implementation addresses (deterministic via CREATE2):");
   console.log("  IdentityRegistry:    ", identityImpl);
@@ -90,11 +112,8 @@ async function main() {
   console.log("  ValidationRegistry:  ", validationProxyAddress);
   console.log("");
 
-  // Get implementation ABIs
+  // Get MinimalUUPS ABI for upgradeToAndCall
   const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
-  const identityImplArtifact = await hre.artifacts.readArtifact("IdentityRegistryUpgradeable");
-  const reputationImplArtifact = await hre.artifacts.readArtifact("ReputationRegistryUpgradeable");
-  const validationImplArtifact = await hre.artifacts.readArtifact("ValidationRegistryUpgradeable");
 
   console.log("=".repeat(80));
   console.log("PERFORMING UPGRADES");
