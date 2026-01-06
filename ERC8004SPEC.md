@@ -129,13 +129,13 @@ The registry extends ERC-721 by adding *getMetadata(uint256 agentId, string meta
 
 When metadata is set, the following event is emitted:
 
-```javascript
+```solidity
 event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue)
 ```
 
 The key `agentWallet` is reserved and cannot be set via *setMetadata()* or during *register()*. It represents the address where the agent receives payments and is initially set to the owner's address. To change it, the agent owner must prove control of the new wallet by providing a valid [EIP-712](./eip-712) signature for EOAs or [ERC-1271](./eip-1271) for smart contract wallets—by calling:
 
-```javascript
+```solidity
 function setAgentWallet(uint256 agentId, address newWallet, uint256 deadline, bytes calldata signature) external
 ```
 
@@ -145,7 +145,7 @@ When the agent is transferred, `agentWallet` is automatically reset to the zero 
 
 New agents can be minted by calling one of these functions:
 
-```javascript
+```solidity
 struct MetadataEntry {
 string metadataKey;
 bytes metadataValue;
@@ -155,13 +155,13 @@ function register(string agentUri, MetadataEntry[] calldata metadata) external r
 
 function register(string agentUri) external returns (uint256 agentId)
 
-function register() external returns (uint256 agentId)
 // agentUri is added later with setAgentUri()
+function register() external returns (uint256 agentId)
 ```
 
 This emits one Transfer event, one MetadataSet event for each metadata entry, if any, and
 
-```javascript
+```solidity
 event Registered(uint256 indexed agentId, string agentUri, address indexed owner)
 ```
 
@@ -169,7 +169,7 @@ event Registered(uint256 indexed agentId, string agentUri, address indexed owner
 
 The agentUri can be updated by calling the following function, which emits a UriUpdated event:
 
-```javascript
+```solidity
 
 function setAgentUri(uint256 agentId, string calldata newUri) external
 
@@ -187,7 +187,7 @@ data:application/json;base64,eyJ0eXBlIjoi...
 
 When the Reputation Registry is deployed, the *identityRegistry* address is passed to the constructor and publicly visible by calling:
 
-```javascript
+```solidity
 function getIdentityRegistry() external view returns (address identityRegistry)
 ```
 
@@ -198,7 +198,7 @@ All fields except the *score* are OPTIONAL, so the off-chain file is not require
 
 New feedback can be added by any *clientAddress* calling:
 
-```javascript
+```solidity
 function giveFeedback(uint256 agentId, uint8 score, string tag1, string tag2, string endpoint, string calldata feedbackUri, bytes32 feedbackHash) external
 ```
 
@@ -206,7 +206,7 @@ The *agentId* must be a validly registered agent. The *score* MUST be between 0 
 
 If the procedure succeeds, an event is emitted:
 
-```javascript
+```solidity
 event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint8 score, string indexed tag1, string tag2, string endpoint, string feedbackUri, bytes32 feedbackHash)
 ```
 
@@ -218,13 +218,13 @@ When the feedback is given by an agent (i.e., the client is an agent), the agent
 
 *clientAddress* can revoke feedback by calling:
 
-```javascript
+```solidity
 function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external
 ```
 
 This emits:
 
-```javascript
+```solidity
 event FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, uint64 indexed feedbackIndex)
 ```
 
@@ -232,7 +232,7 @@ event FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, ui
 
 Anyone (e.g., the *agentId* showing a refund, any off-chain data intelligence aggregator tagging feedback as spam) can call:
 
-```javascript
+```solidity
 function appendResponse(uint256 agentId, address clientAddress, uint64 feedbackIndex, string calldata responseUri, bytes32 responseHash) external
 ```
 
@@ -240,13 +240,13 @@ Where *responseHash* is the KECCAK-256 file hash of the *responseUri* file conte
 
 This emits:
 
-```javascript
+```solidity
 event ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseUri)
 ```
 
 #### Read Functions
 
-```javascript
+```solidity
 function getSummary(uint256 agentId, address[] calldata clientAddresses, string tag1, string tag2) external view returns (uint64 count, uint8 averageScore)
 // agentId is the only mandatory parameter; others are optional filters.
 // Without filtering by clientAddresses, results are subject to Sybil/spam attacks. See Security Considerations for details
@@ -311,7 +311,7 @@ When the Validation Registry is deployed, the *identityRegistry* address is pass
 
 Agents request validation by calling:
 
-```javascript
+```solidity
 function validationRequest(address validatorAddress, uint256 agentId, string requestUri, bytes32 requestHash) external
 ```
 
@@ -319,7 +319,7 @@ This function MUST be called by the owner or operator of *agentId*. The *request
 
 A ValidationRequest event is emitted:
 
-```javascript
+```solidity
 event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId, string requestUri, bytes32 indexed requestHash)
 ```
 
@@ -327,7 +327,7 @@ event ValidationRequest(address indexed validatorAddress, uint256 indexed agentI
 
 Validators respond by calling:
 
-```javascript
+```solidity
 function validationResponse(bytes32 requestHash, uint8 response, string responseUri, bytes32 responseHash, string tag) external
 ```
 
@@ -337,7 +337,7 @@ validationResponse() can be called multiple times for the same *requestHash*, en
 
 Upon successful execution, a *ValidationResponse* event is emitted with all function parameters:
 
-```javascript
+```solidity
 event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId, bytes32 indexed requestHash, uint8 response, string responseUri, bytes32 responseHash, string tag)
 ```
 
@@ -345,7 +345,7 @@ The contract stores *requestHash*, *validatorAddress*, *agentId*, *response*, *l
 
 #### Read Functions
 
-```javascript
+```solidity
 function getValidationStatus(bytes32 requestHash) external view returns (address validatorAddress, uint256 agentId, uint8 response, string tag, uint256 lastUpdate)
 
 //Returns aggregated validation statistics for an agent. agentId is the only mandatory parameter; validatorAddresses and tag are optional filters
