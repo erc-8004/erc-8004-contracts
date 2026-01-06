@@ -155,8 +155,8 @@ function register(string agentUri, MetadataEntry[] calldata metadata) external r
 
 function register(string agentUri) external returns (uint256 agentId)
 
-// agentUri is added later with setAgentUri()
 function register() external returns (uint256 agentId)
+// agentUri is added later with setAgentUri()
 ```
 
 This emits one Transfer event, one MetadataSet event for each metadata entry, if any, and
