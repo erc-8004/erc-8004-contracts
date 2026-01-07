@@ -656,7 +656,7 @@ describe("ERC8004 Registries", async function () {
         ], { account: client.account }),
         reputationRegistry,
         "NewFeedback",
-        [agentId, getAddress(client.account.address), score, keccak256(toHex(tag1)), tag2, endpoint, fileuri, filehash]
+        [agentId, getAddress(client.account.address), 1n, score, keccak256(toHex(tag1)), tag2, endpoint, fileuri, filehash]
       );
 
       // Read feedback back (use 1-based index)
@@ -985,10 +985,10 @@ describe("ERC8004 Registries", async function () {
         false // don't include revoked
       ]);
 
-      assert.equal(result[1].length, 3); // 3 feedbacks
-      assert.equal(result[1][0], 80);
-      assert.equal(result[1][1], 90);
-      assert.equal(result[1][2], 100);
+      assert.equal(result[2].length, 3); // 3 feedbacks (scores at index 2 now)
+      assert.equal(result[2][0], 80);
+      assert.equal(result[2][1], 90);
+      assert.equal(result[2][2], 100);
     });
 
     it("Should store responses and count them", async function () {
@@ -1194,7 +1194,7 @@ describe("ERC8004 Registries", async function () {
         false
       ]);
 
-      const [clients, scores, tag1s, tag2s, revokedStatuses] = result;
+      const [clients, feedbackIndexes, scores, tag1s, tag2s, revokedStatuses] = result;
 
       // Should return all 3 feedbacks
       assert.equal(clients.length, 3);

@@ -16,6 +16,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     event NewFeedback(
         uint256 indexed agentId,
         address indexed clientAddress,
+        uint64 feedbackIndex,
         uint8 score,
         string indexed tag1,
         string tag2,
@@ -139,7 +140,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             $._clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, endpoint, feedbackURI, feedbackHash);
+        emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
@@ -181,15 +182,15 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         return $._lastIndex[agentId][clientAddress];
     }
 
-    function readFeedback(uint256 agentId, address clientAddress, uint64 index)
+    function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
         external
         view
         returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(index > 0, "index must be > 0");
-        require(index <= $._lastIndex[agentId][clientAddress], "index out of bounds");
-        Feedback storage f = $._feedback[agentId][clientAddress][index];
+        require(feedbackIndex > 0, "index must be > 0");
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        Feedback storage f = $._feedback[agentId][clientAddress][feedbackIndex];
         return (f.score, f.tag1, f.tag2, f.isRevoked);
     }
 
@@ -239,6 +240,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool includeRevoked
     ) external view returns (
         address[] memory clients,
+        uint8[] memory feedbackIndexes,
         uint8[] memory scores,
         string[] memory tag1s,
         string[] memory tag2s,
@@ -272,6 +274,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         // Initialize arrays
         clients = new address[](totalCount);
+        feedbackIndexes = new uint8[](totalCount);
         scores = new uint8[](totalCount);
         tag1s = new string[](totalCount);
         tag2s = new string[](totalCount);
@@ -290,6 +293,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
+                feedbackIndexes[idx] = uint8(j);
                 scores[idx] = fb.score;
                 tag1s[idx] = fb.tag1;
                 tag2s[idx] = fb.tag2;

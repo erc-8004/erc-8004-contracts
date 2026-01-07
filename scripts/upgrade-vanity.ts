@@ -184,7 +184,7 @@ async function main() {
     const reputationUpgradeData = encodeFunctionData({
       abi: minimalUUPSArtifact.abi,
       functionName: "upgradeToAndCall",
-      args: [reputationImpl, reputationInitData]
+      args: [reputationImpl, "0x"]
     });
     const reputationUpgradeTxHash = await ownerWallet.sendTransaction({
       to: reputationProxyAddress,
