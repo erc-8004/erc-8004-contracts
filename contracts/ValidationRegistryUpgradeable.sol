@@ -14,7 +14,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,
-        string requestUri,
+        string requestURI,
         bytes32 indexed requestHash
     );
 
@@ -23,7 +23,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint256 indexed agentId,
         bytes32 indexed requestHash,
         uint8 response,
-        string responseUri,
+        string responseURI,
         bytes32 responseHash,
         string tag
     );
@@ -80,7 +80,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function validationRequest(
         address validatorAddress,
         uint256 agentId,
-        string calldata requestUri,
+        string calldata requestURI,
         bytes32 requestHash
     ) external {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
@@ -111,13 +111,13 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         $._agentValidations[agentId].push(requestHash);
         $._validatorRequests[validatorAddress].push(requestHash);
 
-        emit ValidationRequest(validatorAddress, agentId, requestUri, requestHash);
+        emit ValidationRequest(validatorAddress, agentId, requestURI, requestHash);
     }
 
     function validationResponse(
         bytes32 requestHash,
         uint8 response,
-        string calldata responseUri,
+        string calldata responseURI,
         bytes32 responseHash,
         string calldata tag
     ) external {
@@ -131,7 +131,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         s.tag = tag;
         s.lastUpdate = block.timestamp;
         s.hasResponse = true;
-        emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseUri, responseHash, tag);
+        emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseURI, responseHash, tag);
     }
 
     function getValidationStatus(bytes32 requestHash)

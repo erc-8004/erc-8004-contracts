@@ -22,7 +22,7 @@ MCP allows servers to list and offer their capabilities (prompts, resources, too
 
 To foster an open, cross-organizational agent economy, we need mechanisms for discovering and trusting agents in untrusted settings. This ERC addresses this need through three lightweight registries, which can be deployed on any L2 or on Mainnet as per-chain singletons:
 
-**Identity Registry** \- A minimal on-chain handle based on [ERC-721](./eip-721) with UriStorage extension that resolves to an agent's registration file, providing every agent with a portable, censorship-resistant identifier.
+**Identity Registry** \- A minimal on-chain handle based on [ERC-721](./eip-721) with URIStorage extension that resolves to an agent's registration file, providing every agent with a portable, censorship-resistant identifier.
 
 **Reputation Registry** \- A standard interface for posting and fetching feedback signals. Scoring and aggregation occur both on-chain (for composability) and off-chain (for sophisticated algorithms), enabling an ecosystem of specialized services for agent scoring, auditor networks, and insurance pools.
 
@@ -36,7 +36,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### Identity Registry
 
-The Identity Registry uses ERC-721 with the UriStorage extension for agent registration, making **all agents immediately browsable and transferable with NFTs-compliant apps**. Each agent is uniquely identified globally by:
+The Identity Registry uses ERC-721 with the URIStorage extension for agent registration, making **all agents immediately browsable and transferable with NFTs-compliant apps**. Each agent is uniquely identified globally by:
 
 * *agentRegistry*: A colon-separated string `{namespace}:{chainId}:{identityRegistry}` (e.g., `eip155:1:0x742...`) where:
   * *namespace*: The chain family identifier (`eip155` for EVM chains)
@@ -44,11 +44,11 @@ The Identity Registry uses ERC-721 with the UriStorage extension for agent regis
   * *identityRegistry*: The address where the ERC-721 registry contract is deployed
 * *agentId*: The ERC-721 tokenId assigned incrementally by the registry
 
-Throughout this document, *tokenId* in ERC-721 is referred to as *agentId* and *tokenURI* in ERC-721 is referred to as *agentUri*. The owner of the ERC-721 token is the owner of the agent and can transfer ownership or delegate management (e.g., updating the registration file) to operators, as supported by `ERC721URIStorage`.
+Throughout this document, *tokenId* in ERC-721 is referred to as *agentId* and *tokenURI* in ERC-721 is referred to as *agentURI*. The owner of the ERC-721 token is the owner of the agent and can transfer ownership or delegate management (e.g., updating the registration file) to operators, as supported by `ERC721URIStorage`.
 
-#### Agent Uri and Agent Registration File
+#### Agent URI and Agent Registration File
 
-The *agentUri* MUST resolve to the agent registration file. It MAY use any Uri scheme such as `ipfs://` (e.g., `ipfs://cid`) or `https://` (e.g., `https://domain.com/agent3.json`). When the registration uri changes, it can be updated with *setAgentUri()*.
+The *agentURI* MUST resolve to the agent registration file. It MAY use any URI scheme such as `ipfs://` (e.g., `ipfs://cid`) or `https://` (e.g., `https://domain.com/agent3.json`). When the registration uri changes, it can be updated with *setAgentURI()*.
 
 The registration file MUST have the following structure:
 
@@ -118,7 +118,7 @@ Agents MAY advertise their endpoints, which point to an A2A agent card, an MCP e
 
 #### Endpoint Domain Verification (Optional)
 
-Since endpoints can point to domains not controlled by the agent owner, an agent MAY optionally prove control of an HTTPS endpoint-domain by publishing `https://{endpoint-domain}/.well-known/agent-registration.json` containing at least a `registrations` list (or the full agent registration file). Verifiers MAY treat the endpoint-domain as verified if the file is reachable over HTTPS and includes a `registrations` entry whose `agentRegistry` and `agentId` match the on-chain agent; if the endpoint-domain is the same domain that serves the agent’s primary registration file referenced by `agentUri`, this additional check is not needed because domain control is already demonstrated there.
+Since endpoints can point to domains not controlled by the agent owner, an agent MAY optionally prove control of an HTTPS endpoint-domain by publishing `https://{endpoint-domain}/.well-known/agent-registration.json` containing at least a `registrations` list (or the full agent registration file). Verifiers MAY treat the endpoint-domain as verified if the file is reachable over HTTPS and includes a `registrations` entry whose `agentRegistry` and `agentId` match the on-chain agent; if the endpoint-domain is the same domain that serves the agent’s primary registration file referenced by `agentURI`, this additional check is not needed because domain control is already demonstrated there.
 
 Agents SHOULD have at least one registration (multiple are possible), and all fields in the registration are mandatory.
 The *supportedTrust* field is OPTIONAL. If absent or empty, this ERC is used only for discovery, not for trust.
@@ -151,33 +151,33 @@ string metadataKey;
 bytes metadataValue;
 }
 
-function register(string agentUri, MetadataEntry[] calldata metadata) external returns (uint256 agentId)
+function register(string agentURI, MetadataEntry[] calldata metadata) external returns (uint256 agentId)
 
-function register(string agentUri) external returns (uint256 agentId)
+function register(string agentURI) external returns (uint256 agentId)
 
-// agentUri is added later with setAgentUri()
+// agentURI is added later with setAgentURI()
 function register() external returns (uint256 agentId)
 ```
 
 This emits one Transfer event, one MetadataSet event for each metadata entry, if any, and
 
 ```solidity
-event Registered(uint256 indexed agentId, string agentUri, address indexed owner)
+event Registered(uint256 indexed agentId, string agentURI, address indexed owner)
 ```
 
-#### Update agentUri
+#### Update agentURI
 
-The agentUri can be updated by calling the following function, which emits a UriUpdated event:
+The agentURI can be updated by calling the following function, which emits a URIUpdated event:
 
 ```solidity
 
-function setAgentUri(uint256 agentId, string calldata newUri) external
+function setAgentURI(uint256 agentId, string calldata newURI) external
 
-event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy)
+event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy)
 
 ```
 
-If the owner wants to store the entire registration file on-chain, the *agentUri* SHOULD use a base64-encoded data URI rather than a serialized JSON string:
+If the owner wants to store the entire registration file on-chain, the *agentURI* SHOULD use a base64-encoded data URI rather than a serialized JSON string:
 
 ```
 data:application/json;base64,eyJ0eXBlIjoi...
@@ -199,18 +199,18 @@ All fields except the *score* are OPTIONAL, so the off-chain file is not require
 New feedback can be added by any *clientAddress* calling:
 
 ```solidity
-function giveFeedback(uint256 agentId, uint8 score, string tag1, string tag2, string endpoint, string calldata feedbackUri, bytes32 feedbackHash) external
+function giveFeedback(uint256 agentId, uint8 score, string tag1, string tag2, string endpoint, string calldata feedbackURI, bytes32 feedbackHash) external
 ```
 
-The *agentId* must be a validly registered agent. The *score* MUST be between 0 and 100\. *tag1*, *tag2*, *endpoint*, *feedbackUri*, and *feedbackHash* are OPTIONAL.
+The *agentId* must be a validly registered agent. The *score* MUST be between 0 and 100\. *tag1*, *tag2*, *endpoint*, *feedbackURI*, and *feedbackHash* are OPTIONAL.
 
 If the procedure succeeds, an event is emitted:
 
 ```solidity
-event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint8 score, string indexed tag1, string tag2, string endpoint, string feedbackUri, bytes32 feedbackHash)
+event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint8 score, string indexed tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)
 ```
 
-The feedback fields, except *feedbackUri* and *feedbackHash*, are stored in the contract storage along with the feedbackIndex (the number of feedback submissions that *clientAddress* has given to *agentId*). This exposes reputation signals to any smart contract, enabling on-chain composability.
+The feedback fields, except *feedbackURI* and *feedbackHash*, are stored in the contract storage along with the feedbackIndex (the number of feedback submissions that *clientAddress* has given to *agentId*). This exposes reputation signals to any smart contract, enabling on-chain composability.
 
 When the feedback is given by an agent (i.e., the client is an agent), the agent SHOULD use the address set in the on-chain optional walletAddress metadata as the clientAddress, to facilitate reputation aggregation.
 
@@ -233,15 +233,15 @@ event FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, ui
 Anyone (e.g., the *agentId* showing a refund, any off-chain data intelligence aggregator tagging feedback as spam) can call:
 
 ```solidity
-function appendResponse(uint256 agentId, address clientAddress, uint64 feedbackIndex, string calldata responseUri, bytes32 responseHash) external
+function appendResponse(uint256 agentId, address clientAddress, uint64 feedbackIndex, string calldata responseURI, bytes32 responseHash) external
 ```
 
-Where *responseHash* is the KECCAK-256 file hash of the *responseUri* file content to guarantee integrity. This field is not required for IPFS Uris.
+Where *responseHash* is the KECCAK-256 file hash of the *responseURI* file content to guarantee integrity. This field is not required for IPFS URIs.
 
 This emits:
 
 ```solidity
-event ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseUri)
+event ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseURI)
 ```
 
 #### Read Functions
@@ -268,7 +268,7 @@ We expect reputation systems around reviewers/clientAddresses to emerge. **While
 
 #### Off-Chain Feedback File Structure
 
-The OPTIONAL file at the Uri could look like:
+The OPTIONAL file at the URI could look like:
 
 ```jsonc
 {
@@ -312,15 +312,15 @@ When the Validation Registry is deployed, the *identityRegistry* address is pass
 Agents request validation by calling:
 
 ```solidity
-function validationRequest(address validatorAddress, uint256 agentId, string requestUri, bytes32 requestHash) external
+function validationRequest(address validatorAddress, uint256 agentId, string requestURI, bytes32 requestHash) external
 ```
 
-This function MUST be called by the owner or operator of *agentId*. The *requestUri* points to off-chain data containing all information needed for the validator to validate, including inputs and outputs needed for the verification. The *requestHash* is a commitment to this data (`keccak256` of the request payload) and identifies the request. All other fields are mandatory.
+This function MUST be called by the owner or operator of *agentId*. The *requestURI* points to off-chain data containing all information needed for the validator to validate, including inputs and outputs needed for the verification. The *requestHash* is a commitment to this data (`keccak256` of the request payload) and identifies the request. All other fields are mandatory.
 
 A ValidationRequest event is emitted:
 
 ```solidity
-event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId, string requestUri, bytes32 indexed requestHash)
+event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId, string requestURI, bytes32 indexed requestHash)
 ```
 
 #### Validation Response
@@ -328,17 +328,17 @@ event ValidationRequest(address indexed validatorAddress, uint256 indexed agentI
 Validators respond by calling:
 
 ```solidity
-function validationResponse(bytes32 requestHash, uint8 response, string responseUri, bytes32 responseHash, string tag) external
+function validationResponse(bytes32 requestHash, uint8 response, string responseURI, bytes32 responseHash, string tag) external
 ```
 
-Only *requestHash* and *response* are mandatory; *responseUri*, *responseHash* and *tag* are optional. This function MUST be called by the *validatorAddress* specified in the original request. The *response* is a value between 0 and 100, which can be used as binary (0 for failed, 100 for passed) or with intermediate values for validations with a spectrum of outcomes. The optional *responseUri* points to off-chain evidence or audit of the validation, *responseHash* is its commitment (in case the resource is not on IPFS), while *tag* allows for custom categorization or additional data.
+Only *requestHash* and *response* are mandatory; *responseURI*, *responseHash* and *tag* are optional. This function MUST be called by the *validatorAddress* specified in the original request. The *response* is a value between 0 and 100, which can be used as binary (0 for failed, 100 for passed) or with intermediate values for validations with a spectrum of outcomes. The optional *responseURI* points to off-chain evidence or audit of the validation, *responseHash* is its commitment (in case the resource is not on IPFS), while *tag* allows for custom categorization or additional data.
 
 validationResponse() can be called multiple times for the same *requestHash*, enabling use cases like progressive validation states (e.g., “soft finality” and “hard finality” using *tag*) or updates to validation status.
 
 Upon successful execution, a *ValidationResponse* event is emitted with all function parameters:
 
 ```solidity
-event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId, bytes32 indexed requestHash, uint8 response, string responseUri, bytes32 responseHash, string tag)
+event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId, bytes32 indexed requestHash, uint8 response, string responseURI, bytes32 responseHash, string tag)
 ```
 
 The contract stores *requestHash*, *validatorAddress*, *agentId*, *response*, *lastUpdate*, and *tag* for on-chain querying and composability.

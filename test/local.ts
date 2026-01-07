@@ -98,20 +98,20 @@ describe("ERC8004 Registries", async function () {
       const [owner] = await viem.getWalletClients();
 
       // Register with initial URI
-      const txHash = await identityRegistry.write.register(["ipfs://initialUri"]);
+      const txHash = await identityRegistry.write.register(["ipfs://initialURI"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
       // Verify initial URI
-      const initialUri = await identityRegistry.read.tokenURI([agentId]);
-      assert.equal(initialUri, "ipfs://initialUri");
+      const initialURI = await identityRegistry.read.tokenURI([agentId]);
+      assert.equal(initialURI, "ipfs://initialURI");
 
       // Update tokenURI
-      const newUri = "https://example.com/updated-agent.json";
-      await identityRegistry.write.setAgentUri([agentId, newUri]);
+      const newURI = "https://example.com/updated-agent.json";
+      await identityRegistry.write.setAgentURI([agentId, newURI]);
 
       // Verify updated URI
-      const updatedUri = await identityRegistry.read.tokenURI([agentId]);
-      assert.equal(updatedUri, newUri);
+      const updatedURI = await identityRegistry.read.tokenURI([agentId]);
+      assert.equal(updatedURI, newURI);
     });
 
     /**
@@ -124,20 +124,20 @@ describe("ERC8004 Registries", async function () {
       // Test ipfs://
       const txHash1 = await identityRegistry.write.register(["ipfs://QmTestCID123"]);
       const agentId1 = await getAgentIdFromRegistration(txHash1);
-      const ipfsUri = await identityRegistry.read.tokenURI([agentId1]);
-      assert.equal(ipfsUri, "ipfs://QmTestCID123");
+      const ipfsURI = await identityRegistry.read.tokenURI([agentId1]);
+      assert.equal(ipfsURI, "ipfs://QmTestCID123");
 
       // Test https://
       const txHash2 = await identityRegistry.write.register(["https://domain.com/agent3.json"]);
       const agentId2 = await getAgentIdFromRegistration(txHash2);
-      const httpsUri = await identityRegistry.read.tokenURI([agentId2]);
-      assert.equal(httpsUri, "https://domain.com/agent3.json");
+      const httpsURI = await identityRegistry.read.tokenURI([agentId2]);
+      assert.equal(httpsURI, "https://domain.com/agent3.json");
 
       // Test http:// (should work even though spec upgrades to https)
       const txHash3 = await identityRegistry.write.register(["http://example.com/agent.json"]);
       const agentId3 = await getAgentIdFromRegistration(txHash3);
-      const httpUri = await identityRegistry.read.tokenURI([agentId3]);
-      assert.equal(httpUri, "http://example.com/agent.json");
+      const httpURI = await identityRegistry.read.tokenURI([agentId3]);
+      assert.equal(httpURI, "http://example.com/agent.json");
     });
 
     it("Should set and get metadata", async function () {
@@ -217,13 +217,13 @@ describe("ERC8004 Registries", async function () {
       assert.equal(tokenOwner.toLowerCase(), owner.account.address.toLowerCase());
 
       // tokenURI should be empty initially
-      const initialUri = await identityRegistry.read.tokenURI([agentId]);
-      assert.equal(initialUri, "");
+      const initialURI = await identityRegistry.read.tokenURI([agentId]);
+      assert.equal(initialURI, "");
 
       // Set tokenURI later
-      await identityRegistry.write.setAgentUri([agentId, "ipfs://later-set-uri"]);
-      const updatedUri = await identityRegistry.read.tokenURI([agentId]);
-      assert.equal(updatedUri, "ipfs://later-set-uri");
+      await identityRegistry.write.setAgentURI([agentId, "ipfs://later-set-uri"]);
+      const updatedURI = await identityRegistry.read.tokenURI([agentId]);
+      assert.equal(updatedURI, "ipfs://later-set-uri");
     });
   });
 
@@ -336,17 +336,17 @@ describe("ERC8004 Registries", async function () {
         keccak256(toHex("content")),
       ], { account: client.account });
 
-      const responseUri = "ipfs://response1";
+      const responseURI = "ipfs://response1";
       const responseHash = keccak256(toHex("response content"));
 
       await viem.assertions.emitWithArgs(
         reputationRegistry.write.appendResponse(
-          [agentId, client.account.address, 1n, responseUri, responseHash],
+          [agentId, client.account.address, 1n, responseURI, responseHash],
           { account: responder.account }
         ),
         reputationRegistry,
         "ResponseAppended",
-        [agentId, getAddress(client.account.address), 1n, getAddress(responder.account.address), responseUri, responseHash]
+        [agentId, getAddress(client.account.address), 1n, getAddress(responder.account.address), responseURI, responseHash]
       );
     });
 
@@ -1199,19 +1199,19 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestUri = "ipfs://validation-request";
+      const requestURI = "ipfs://validation-request";
       const requestHash = generateRandomRequestHash();
 
       await viem.assertions.emitWithArgs(
         validationRegistry.write.validationRequest([
           validator.account.address,
           agentId,
-          requestUri,
+          requestURI,
           requestHash,
         ]),
         validationRegistry,
         "ValidationRequest",
-        [getAddress(validator.account.address), agentId, requestUri, requestHash]
+        [getAddress(validator.account.address), agentId, requestURI, requestHash]
       );
 
       // Check status was created
@@ -1229,29 +1229,29 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestUri = "ipfs://validation-request";
+      const requestURI = "ipfs://validation-request";
       const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
         agentId,
-        requestUri,
+        requestURI,
         requestHash,
       ]);
 
       const response = 100;
-      const responseUri = "ipfs://validation-response";
+      const responseURI = "ipfs://validation-response";
       const responseHash = keccak256(toHex("response data"));
       const tag = "passed";
 
       await viem.assertions.emitWithArgs(
         validationRegistry.write.validationResponse(
-          [requestHash, response, responseUri, responseHash, tag],
+          [requestHash, response, responseURI, responseHash, tag],
           { account: validator.account }
         ),
         validationRegistry,
         "ValidationResponse",
-        [getAddress(validator.account.address), agentId, requestHash, response, responseUri, responseHash, tag]
+        [getAddress(validator.account.address), agentId, requestHash, response, responseURI, responseHash, tag]
       );
 
       // Check status was updated (now returns responseHash too)
@@ -1271,13 +1271,13 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestUri = "ipfs://validation-request";
+      const requestURI = "ipfs://validation-request";
       const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
         agentId,
-        requestUri,
+        requestURI,
         requestHash,
       ]);
 
@@ -1286,7 +1286,7 @@ describe("ERC8004 Registries", async function () {
         validationRegistry.write.validationRequest([
           validator.account.address,
           agentId,
-          requestUri,
+          requestURI,
           requestHash,
         ])
       );
@@ -1300,13 +1300,13 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const requestUri = "ipfs://validation-request";
+      const requestURI = "ipfs://validation-request";
       const requestHash = generateRandomRequestHash();
 
       await validationRegistry.write.validationRequest([
         validator.account.address,
         agentId,
-        requestUri,
+        requestURI,
         requestHash,
       ]);
 

@@ -38,9 +38,9 @@ contract IdentityRegistryUpgradeable is
         }
     }
 
-    event Registered(uint256 indexed agentId, string agentUri, address indexed owner);
+    event Registered(uint256 indexed agentId, string agentURI, address indexed owner);
     event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
-    event UriUpdated(uint256 indexed agentId, string newUri, address indexed updatedBy);
+    event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy);
 
     bytes32 private constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
@@ -70,20 +70,20 @@ contract IdentityRegistryUpgradeable is
         emit Registered(agentId, "", msg.sender);
     }
 
-    function register(string memory agentUri) external returns (uint256 agentId) {
+    function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
-        _setTokenURI(agentId, agentUri);
-        emit Registered(agentId, agentUri, msg.sender);
+        _setTokenURI(agentId, agentURI);
+        emit Registered(agentId, agentURI, msg.sender);
     }
 
-    function register(string memory agentUri, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
+    function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
-        _setTokenURI(agentId, agentUri);
-        emit Registered(agentId, agentUri, msg.sender);
+        _setTokenURI(agentId, agentURI);
+        emit Registered(agentId, agentURI, msg.sender);
 
         for (uint256 i = 0; i < metadata.length; i++) {
             require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
@@ -110,7 +110,7 @@ contract IdentityRegistryUpgradeable is
         emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
     }
 
-    function setAgentUri(uint256 agentId, string calldata newUri) external {
+    function setAgentURI(uint256 agentId, string calldata newURI) external {
         address owner = ownerOf(agentId);
         require(
             msg.sender == owner ||
@@ -118,8 +118,8 @@ contract IdentityRegistryUpgradeable is
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
-        _setTokenURI(agentId, newUri);
-        emit UriUpdated(agentId, newUri, msg.sender);
+        _setTokenURI(agentId, newURI);
+        emit URIUpdated(agentId, newURI, msg.sender);
     }
 
     function getAgentWallet(uint256 agentId) external view returns (address) {

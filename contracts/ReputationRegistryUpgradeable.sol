@@ -20,7 +20,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string indexed tag1,
         string tag2,
         string endpoint,
-        string feedbackUri,
+        string feedbackURI,
         bytes32 feedbackHash
     );
 
@@ -35,7 +35,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         address indexed clientAddress,
         uint64 feedbackIndex,
         address indexed responder,
-        string responseUri,
+        string responseURI,
         bytes32 responseHash
     );
 
@@ -97,7 +97,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata tag1,
         string calldata tag2,
         string calldata endpoint,
-        string calldata feedbackUri,
+        string calldata feedbackURI,
         bytes32 feedbackHash
     ) external {
         require(score <= 100, "score>100");
@@ -139,7 +139,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             $._clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, endpoint, feedbackUri, feedbackHash);
+        emit NewFeedback(agentId, msg.sender, score, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
@@ -156,13 +156,13 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint256 agentId,
         address clientAddress,
         uint64 feedbackIndex,
-        string calldata responseUri,
+        string calldata responseURI,
         bytes32 responseHash
     ) external {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         require(feedbackIndex > 0, "index must be > 0");
         require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
-        require(bytes(responseUri).length > 0, "Empty URI");
+        require(bytes(responseURI).length > 0, "Empty URI");
 
         // Track new responder
         if (!$._responderExists[agentId][clientAddress][feedbackIndex][msg.sender]) {
@@ -173,7 +173,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Increment response count for this responder
         $._responseCount[agentId][clientAddress][feedbackIndex][msg.sender]++;
 
-        emit ResponseAppended(agentId, clientAddress, feedbackIndex, msg.sender, responseUri, responseHash);
+        emit ResponseAppended(agentId, clientAddress, feedbackIndex, msg.sender, responseURI, responseHash);
     }
 
     function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64) {
