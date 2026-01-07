@@ -102,24 +102,44 @@ async function main() {
   // Gas settings
   const gasPrice = parseGwei("20"); // 20 gwei
 
+  // Encode initialize() calls for each implementation
+  const identityInitData = encodeFunctionData({
+    abi: identityImplArtifact.abi,
+    functionName: "initialize",
+    args: []
+  });
+  const reputationInitData = encodeFunctionData({
+    abi: reputationImplArtifact.abi,
+    functionName: "initialize",
+    args: [PROXIES.identityRegistry]
+  });
+  const validationInitData = encodeFunctionData({
+    abi: validationImplArtifact.abi,
+    functionName: "initialize",
+    args: [PROXIES.identityRegistry]
+  });
+
   // Prepare all three transactions
   const transactions = [
     {
       name: "IdentityRegistry",
       proxy: PROXIES.identityRegistry,
       implementation: IMPLEMENTATIONS.identityRegistry,
+      initData: identityInitData,
       nonce: startingNonce,
     },
     {
       name: "ReputationRegistry",
       proxy: PROXIES.reputationRegistry,
       implementation: IMPLEMENTATIONS.reputationRegistry,
+      initData: reputationInitData,
       nonce: startingNonce + 1,
     },
     {
       name: "ValidationRegistry",
       proxy: PROXIES.validationRegistry,
       implementation: IMPLEMENTATIONS.validationRegistry,
+      initData: validationInitData,
       nonce: startingNonce + 2,
     },
   ];
@@ -129,11 +149,11 @@ async function main() {
   for (const tx of transactions) {
     console.log(`Preparing ${tx.name} upgrade (nonce ${tx.nonce})...`);
 
-    // Encode upgradeToAndCall
+    // Encode upgradeToAndCall with initialize() data
     const upgradeData = encodeFunctionData({
       abi: minimalUUPSArtifact.abi,
       functionName: "upgradeToAndCall",
-      args: [tx.implementation, "0x" as `0x${string}`],
+      args: [tx.implementation, tx.initData],
     });
 
     // Estimate gas

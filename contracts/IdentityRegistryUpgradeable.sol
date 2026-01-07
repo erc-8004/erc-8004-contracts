@@ -53,20 +53,20 @@ contract IdentityRegistryUpgradeable is
         _disableInitializers();
     }
 
-    function initialize() public initializer {
+    function initialize() public reinitializer(2) {
         __ERC721_init("AgentIdentity", "AGENT");
         __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __EIP712_init("ERC8004IdentityRegistry", "1");
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        $._lastId = 0;
     }
 
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
+        $._agentWallet[agentId] = msg.sender;
         emit Registered(agentId, "", msg.sender);
     }
 
@@ -74,6 +74,7 @@ contract IdentityRegistryUpgradeable is
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
+        $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
     }
@@ -82,6 +83,7 @@ contract IdentityRegistryUpgradeable is
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
         _safeMint(msg.sender, agentId);
+        $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
 

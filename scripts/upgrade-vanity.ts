@@ -143,10 +143,16 @@ async function main() {
     console.log("");
   } else {
     console.log("   Upgrading IdentityRegistry proxy...");
+    // Encode initialize() call for the new implementation
+    const identityInitData = encodeFunctionData({
+      abi: identityImplArtifact.abi,
+      functionName: "initialize",
+      args: []
+    });
     const identityUpgradeData = encodeFunctionData({
       abi: minimalUUPSArtifact.abi,
       functionName: "upgradeToAndCall",
-      args: [identityImpl, "0x" as `0x${string}`]
+      args: [identityImpl, identityInitData]
     });
     const identityUpgradeTxHash = await ownerWallet.sendTransaction({
       to: identityProxyAddress,
@@ -169,10 +175,16 @@ async function main() {
     console.log("");
   } else {
     console.log("   Upgrading ReputationRegistry proxy...");
+    // Encode initialize(address) call for the new implementation
+    const reputationInitData = encodeFunctionData({
+      abi: reputationImplArtifact.abi,
+      functionName: "initialize",
+      args: [identityProxyAddress]
+    });
     const reputationUpgradeData = encodeFunctionData({
       abi: minimalUUPSArtifact.abi,
       functionName: "upgradeToAndCall",
-      args: [reputationImpl, "0x" as `0x${string}`]
+      args: [reputationImpl, reputationInitData]
     });
     const reputationUpgradeTxHash = await ownerWallet.sendTransaction({
       to: reputationProxyAddress,
@@ -195,10 +207,16 @@ async function main() {
     console.log("");
   } else {
     console.log("   Upgrading ValidationRegistry proxy...");
+    // Encode initialize(address) call for the new implementation
+    const validationInitData = encodeFunctionData({
+      abi: validationImplArtifact.abi,
+      functionName: "initialize",
+      args: [identityProxyAddress]
+    });
     const validationUpgradeData = encodeFunctionData({
       abi: minimalUUPSArtifact.abi,
       functionName: "upgradeToAndCall",
-      args: [validationImpl, "0x" as `0x${string}`]
+      args: [validationImpl, validationInitData]
     });
     const validationUpgradeTxHash = await ownerWallet.sendTransaction({
       to: validationProxyAddress,

@@ -66,7 +66,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address identityRegistry_) public initializer {
+    function initialize(address identityRegistry_) public reinitializer(2) {
         require(identityRegistry_ != address(0), "bad identity");
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
