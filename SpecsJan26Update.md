@@ -64,6 +64,7 @@ This document summarizes **all spec changes** incorporating community feedback g
 - **Update mechanism changed**:
   - Old referenced updating registration via ERC721URIStorage internals (e.g., `_setTokenURI()`).
   - New adds **spec-level** `setAgentURI(...)` and `URIUpdated(...)`.
+- **On-chain registration JSON**: if the owner wants to store the entire registration file on-chain, the `agentURI` SHOULD use a base64-encoded data URI rather than a serialized JSON string (e.g., `data:application/json;base64,eyJ0eXBlIjoi...`).
 
 ### Registration JSON schema (example) updates
 
