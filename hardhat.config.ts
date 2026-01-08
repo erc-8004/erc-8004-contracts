@@ -3,10 +3,28 @@ import "@nomicfoundation/hardhat-ethers";
 import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
-import { configVariable } from "hardhat/config";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
+  verify: {
+    etherscan: {
+      apiKey: process.env.ETHERSCAN_API_KEY || "",
+    }
+  },
+  chainDescriptors: {
+    11155111: {
+      name: "Sepolia",
+      blockExplorers: {
+        etherscan: {
+          url: "https://sepolia.etherscan.io",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
+    }
+  },
   solidity: {
     profiles: {
       default: {
@@ -18,7 +36,7 @@ const config: HardhatUserConfig = {
             runs: 200,
           },
           viaIR: true,
-          
+
         },
       },
       production: {
@@ -46,8 +64,8 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: process.env.SEPOLIA_RPC_URL || "",
+      accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
     },
   },
 };
