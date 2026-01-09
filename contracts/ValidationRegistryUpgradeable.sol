@@ -137,12 +137,12 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function getValidationStatus(bytes32 requestHash)
         external
         view
-        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
+        returns (address validatorAddress, uint256 agentId, uint8 response, string memory tag, uint256 lastUpdate)
     {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         ValidationStatus memory s = $.validations[requestHash];
         require(s.validatorAddress != address(0), "unknown");
-        return (s.validatorAddress, s.agentId, s.response, s.responseHash, s.tag, s.lastUpdate);
+        return (s.validatorAddress, s.agentId, s.response, s.tag, s.lastUpdate);
     }
 
     function getSummary(
