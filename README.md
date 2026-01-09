@@ -2,29 +2,35 @@
 
 Implementation of the ERC-8004 protocol for agent discovery and trust through reputation and validation.
 
-### Testnet Contract Addresses
+### Contract Addresses (Jan 2026 Test Net)
 
-**All addresses follow the canonical `0x8004` pattern:**
-
-#### Sepolia
-- Identity: [`0x8004a6090Cd10A7288092483047B097295Fb8847`](https://sepolia.etherscan.io/address/0x8004a6090Cd10A7288092483047B097295Fb8847)
-- Reputation: [`0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E`](https://sepolia.etherscan.io/address/0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E)
-- Validation: [`0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5`](https://sepolia.etherscan.io/address/0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5)
+#### ETH Sepolia
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
 #### Base Sepolia
-- Identity: [`0x8004AA63c570c570eBF15376c0dB199918BFe9Fb`](https://sepolia.basescan.org/address/0x8004AA63c570c570eBF15376c0dB199918BFe9Fb)
-- Reputation: [`0x8004bd8daB57f14Ed299135749a5CB5c42d341BF`](https://sepolia.basescan.org/address/0x8004bd8daB57f14Ed299135749a5CB5c42d341BF)
-- Validation: [`0x8004C269D0A5647E51E121FeB226200ECE932d55`](https://sepolia.basescan.org/address/0x8004C269D0A5647E51E121FeB226200ECE932d55)
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
 
 #### Linea Sepolia
-- Identity: [`0x8004aa7C931bCE1233973a0C6A667f73F66282e7`](https://sepolia.lineascan.build/address/0x8004aa7C931bCE1233973a0C6A667f73F66282e7)
-- Reputation: [`0x8004bd8483b99310df121c46ED8858616b2Bba02`](https://sepolia.lineascan.build/address/0x8004bd8483b99310df121c46ED8858616b2Bba02)
-- Validation: [`0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB`](https://sepolia.lineascan.build/address/0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB)
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### Polygon Amoy
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
 
 #### Hedera Testnet
-- **IdentityRegistry**: `0x4c74ebd72921d537159ed2053f46c12a7d8e5923`
-- **ReputationRegistry**: `0xc565edcba77e3abeade40bfd6cf6bf583b3293e0`
-- **ValidationRegistry**: `0x18df085d85c586e9241e0cd121ca422f571c2da6`
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### HyperEVM Testnet
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### SKALE Base Sepolia Testnet
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
 
 #### 0G Galileo Testnet
 - **IdentityRegistry**: [`0x80043ed9cf33a3472768dcd53175bb44e03a1e4a`](https://chainscan-galileo.0g.ai/address/0x80043ed9cf33a3472768dcd53175bb44e03a1e4a)
@@ -43,12 +49,14 @@ This project implements **ERC-8004**, a protocol that enables discovering, choos
 
 ```
 contracts/
-├── IdentityRegistry.sol     - ERC-721 based agent registration
-├── ReputationRegistry.sol   - Feedback and reputation tracking
-└── ValidationRegistry.sol   - Validation request/response system
+├── IdentityRegistryUpgradeable.sol     - ERC-721 based agent registration (upgradeable)
+├── ReputationRegistryUpgradeable.sol   - Feedback and reputation tracking (upgradeable)
+└── ValidationRegistryUpgradeable.sol   - Validation request/response system (upgradeable)
 
 test/
-└── ERC8004.ts              - Comprehensive test suite
+├── core.ts                 - Core behavior tests
+├── upgradeable.ts          - Upgradeability / proxy tests
+└── local.ts                - Local network workflow tests
 
 ERC8004SPEC.md              - Full protocol specification
 ```
@@ -69,11 +77,9 @@ ERC8004SPEC.md              - Full protocol specification
 - Multiple feedback entries per client-agent pair
 
 ### Validation Registry
-- Agents request validation from specific validators
-- Validators respond with 0-100 scores and optional tags
-- Support for progressive validation states
-- Track all validations per agent and per validator
-- On-chain aggregation with filtering
+> **Warning**
+>
+> The **Validation Registry** portion of the ERC-8004 spec is **still under active update and discussion with the TEE community**. This section will be revised and expanded in a follow-up spec update **later this year**.
 
 ## Installation
 

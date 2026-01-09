@@ -4,15 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "hardhat test",
-    "test:upgradeable": "hardhat test test/ERC8004Upgradeable.ts",
-    "test:all": "hardhat test test/ERC8004.ts && hardhat test test/ERC8004Upgradeable.ts",
-    "local": "hardhat node",
-    "deploy": "hardhat ignition deploy ./ignition/modules/ERC8004.ts --network localhost",
-    "deploy:upgradeable": "hardhat run scripts/deploy-upgradeable.ts --network localhost",
-    "deploy:upgradeable:sepolia": "hardhat run scripts/deploy-upgradeable.ts --network sepolia",
-    "upgrade": "hardhat run scripts/upgrade-contracts.ts --network localhost",
-    "upgrade:sepolia": "hardhat run scripts/upgrade-contracts.ts --network sepolia"
+    "test:core": "node --import tsx --test test/core.ts",
+    "test:upgradeable": "node --import tsx --test test/upgradeable.ts",
+    "test": "npm run test:core && npm run test:upgradeable",
+    "local:test": "node --import tsx --test test/local.ts",
+    "node": "npx hardhat node",
+    "local": "npm run local:factory && npm run local:vanity",
+    "local:factory": "npx hardhat run scripts/deploy-create2-factory.ts --network localhost",
+    "local:fund-owner": "npx hardhat run scripts/fund-local-owner.ts --network localhost",
+    "local:vanity": "npm run local:deploy:vanity && npm run local:upgrade:vanity:presigned && npm run local:verify:vanity",
+    "local:deploy:vanity": "npx hardhat run scripts/deploy-vanity.ts --network localhost",
+    "local:upgrade:vanity": "npx hardhat run scripts/upgrade-vanity.ts --network localhost",
+    "local:upgrade:vanity:presigned": "npx hardhat run scripts/upgrade-vanity-presigned.ts --network localhost",
+    "local:verify:vanity": "npx hardhat run scripts/verify-vanity.ts --network localhost",
+    "find-salts": "npx hardhat run scripts/find-vanity-salts-parallel.ts --network localhost",
+    "deploy:vanity": "npx hardhat run scripts/deploy-vanity.ts",
+    "upgrade:vanity": "npx hardhat run scripts/upgrade-vanity.ts",
+    "verify:vanity": "npx hardhat run scripts/verify-vanity.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,18 +28,27 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.1",
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
+    "@nomicfoundation/hardhat-ignition-viem": "^3.0.3",
+    "@nomicfoundation/hardhat-keystore": "^3.0.2",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.1",
+    "@nomicfoundation/hardhat-node-test-runner": "^3.0.4",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
-    "@nomicfoundation/hardhat-verify": "^3.0.4",
+    "@nomicfoundation/hardhat-verify": "^3.0.6",
+    "@nomicfoundation/hardhat-viem": "^3.0.0",
+    "@nomicfoundation/hardhat-viem-assertions": "^3.0.2",
+    "@nomicfoundation/ignition-core": "^3.0.3",
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
     "@types/node": "^22.18.8",
     "ethers": "^6.15.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
-    "hardhat": "^3.0.8",
+    "hardhat": "^3.0.6",
     "typescript": "~5.8.0",
     "viem": "^2.38.0"
   },
   "type": "module",
   "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0"
+    "@openzeppelin/contracts": "^5.4.0",
+    "@safe-global/safe-singleton-factory": "^2.0.0",
+    "dotenv": "^17.2.3"
   }
 }
