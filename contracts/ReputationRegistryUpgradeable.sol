@@ -18,7 +18,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         address indexed clientAddress,
         uint64 feedbackIndex,
         uint8 score,
-        string indexed tag1,
+        string indexed indexedTag1,
+        string tag1,
         string tag2,
         string endpoint,
         string feedbackURI,
@@ -138,7 +139,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             $._clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag2, endpoint, feedbackURI, feedbackHash);
+        emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
