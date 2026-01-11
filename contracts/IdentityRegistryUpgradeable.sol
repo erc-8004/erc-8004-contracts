@@ -53,13 +53,10 @@ contract IdentityRegistryUpgradeable is
         _disableInitializers();
     }
 
-    function initialize() public reinitializer(2) {
+    function initialize() public reinitializer(2) onlyOwner {
         __ERC721_init("AgentIdentity", "AGENT");
         __ERC721URIStorage_init();
-        __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
         __EIP712_init("ERC8004IdentityRegistry", "1");
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
     }
 
     function register() external returns (uint256 agentId) {
