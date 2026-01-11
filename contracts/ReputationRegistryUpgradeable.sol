@@ -81,10 +81,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address identityRegistry_) public reinitializer(2) {
+    function initialize(address identityRegistry_) public reinitializer(2) onlyOwner {
         require(identityRegistry_ != address(0), "bad identity");
-        __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
         _identityRegistry = identityRegistry_;
     }
 
@@ -240,7 +238,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool includeRevoked
     ) external view returns (
         address[] memory clients,
-        uint8[] memory feedbackIndexes,
+        uint64[] memory feedbackIndexes,
         uint8[] memory scores,
         string[] memory tag1s,
         string[] memory tag2s,
@@ -274,7 +272,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         // Initialize arrays
         clients = new address[](totalCount);
-        feedbackIndexes = new uint8[](totalCount);
+        feedbackIndexes = new uint64[](totalCount);
         scores = new uint8[](totalCount);
         tag1s = new string[](totalCount);
         tag2s = new string[](totalCount);
@@ -293,7 +291,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
-                feedbackIndexes[idx] = uint8(j);
+                feedbackIndexes[idx] = j;
                 scores[idx] = fb.score;
                 tag1s[idx] = fb.tag1;
                 tag2s[idx] = fb.tag2;

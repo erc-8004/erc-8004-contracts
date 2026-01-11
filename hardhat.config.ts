@@ -15,6 +15,15 @@ const config: HardhatUserConfig = {
     }
   },
   chainDescriptors: {
+    1: {
+      name: "Ethereum Mainnet",
+      blockExplorers: {
+        etherscan: {
+          url: "https://etherscan.io",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
+    },
     11155111: {
       name: "Sepolia",
       blockExplorers: {
@@ -66,6 +75,12 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.SEPOLIA_RPC_URL || "",
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
+    },
+    mainnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.MAINNET_RPC_URL || "",
+      accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
     },
   },
 };
