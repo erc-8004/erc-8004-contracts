@@ -2,9 +2,36 @@
 
 Implementation of the ERC-8004 protocol for agent discovery and trust through reputation and validation.
 
-### Contract Addresses
+### Contract Addresses (Jan 2026 Test Net)
 
-TBC
+#### ETH Sepolia
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Base Sepolia
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### Linea Sepolia
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### Polygon Amoy
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### Hedera Testnet
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### HyperEVM Testnet
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
+#### SKALE Base Sepolia Testnet
+- **IdentityRegistry**: to be deployed
+- **ReputationRegistry**: to be deployed
+
 
 ## About
 
@@ -18,12 +45,14 @@ This project implements **ERC-8004**, a protocol that enables discovering, choos
 
 ```
 contracts/
-├── IdentityRegistry.sol     - ERC-721 based agent registration
-├── ReputationRegistry.sol   - Feedback and reputation tracking
-└── ValidationRegistry.sol   - Validation request/response system
+├── IdentityRegistryUpgradeable.sol     - ERC-721 based agent registration (upgradeable)
+├── ReputationRegistryUpgradeable.sol   - Feedback and reputation tracking (upgradeable)
+└── ValidationRegistryUpgradeable.sol   - Validation request/response system (upgradeable)
 
 test/
-└── ERC8004.ts              - Comprehensive test suite
+├── core.ts                 - Core behavior tests
+├── upgradeable.ts          - Upgradeability / proxy tests
+└── local.ts                - Local network workflow tests
 
 ERC8004SPEC.md              - Full protocol specification
 ```
@@ -44,11 +73,9 @@ ERC8004SPEC.md              - Full protocol specification
 - Multiple feedback entries per client-agent pair
 
 ### Validation Registry
-- Agents request validation from specific validators
-- Validators respond with 0-100 scores and optional tags
-- Support for progressive validation states
-- Track all validations per agent and per validator
-- On-chain aggregation with filtering
+> **Warning**
+>
+> The **Validation Registry** portion of the ERC-8004 spec is **still under active update and discussion with the TEE community**. This section will be revised and expanded in a follow-up spec update **later this year**.
 
 ## Installation
 
