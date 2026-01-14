@@ -38,7 +38,7 @@ const config: HardhatUserConfig = {
       blockExplorers: {
         etherscan: {
           url: "https://sepolia.basescan.org",
-          apiUrl: "https://api-sepolia.basescan.org/api",
+          apiUrl: "https://api.etherscan.io/v2/api",
         }
       }
     }
