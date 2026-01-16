@@ -30,12 +30,12 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     struct ValidationStatus {
         address validatorAddress;
-        uint256 agentId;
         uint8 response;       // 0..100
+        bool hasResponse;
+        uint256 agentId;
         bytes32 responseHash;
         string tag;
         uint256 lastUpdate;
-        bool hasResponse;
     }
 
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)

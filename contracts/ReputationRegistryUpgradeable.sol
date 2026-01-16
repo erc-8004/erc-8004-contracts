@@ -43,9 +43,9 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     struct Feedback {
         uint8 score;
+        bool isRevoked;
         string tag1;
         string tag2;
-        bool isRevoked;
     }
 
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
