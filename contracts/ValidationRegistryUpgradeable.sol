@@ -116,12 +116,13 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 responseHash,
         string calldata tag
     ) external {
+        require(response <= 100, "resp>100");
+
         ValidationStatus storage s = _getValidationRegistryStorage().validations[requestHash];
         address validatorAddress = s.validatorAddress;
-
         require(validatorAddress != address(0), "unknown");
         require(msg.sender == validatorAddress, "not validator");
-        require(response <= 100, "resp>100");
+        
         s.response = response;
         s.responseHash = responseHash;
         s.tag = tag;

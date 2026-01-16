@@ -130,6 +130,10 @@ contract IdentityRegistryUpgradeable is
         uint256 deadline,
         bytes calldata signature
     ) external {
+        require(newWallet != address(0), "bad wallet");
+        require(block.timestamp <= deadline, "expired");
+        require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, "deadline too far");
+
         address owner = ownerOf(agentId);
         require(
             msg.sender == owner ||
@@ -137,9 +141,6 @@ contract IdentityRegistryUpgradeable is
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
-        require(newWallet != address(0), "bad wallet");
-        require(block.timestamp <= deadline, "expired");
-        require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, "deadline too far");
 
         bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);

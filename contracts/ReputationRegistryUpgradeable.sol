@@ -154,11 +154,12 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata responseURI,
         bytes32 responseHash
     ) external {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
         require(bytes(responseURI).length > 0, "Empty URI");
+        require(feedbackIndex > 0, "index must be > 0");
 
+        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        
         // Track new responder
         if (!$._responderExists[agentId][clientAddress][feedbackIndex][msg.sender]) {
             $._responders[agentId][clientAddress][feedbackIndex].push(msg.sender);
