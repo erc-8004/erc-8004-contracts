@@ -171,9 +171,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         emit ResponseAppended(agentId, clientAddress, feedbackIndex, msg.sender, responseURI, responseHash);
     }
 
-    function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        return $._lastIndex[agentId][clientAddress];
+    function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64 lastIndex) {
+        lastIndex = _getReputationRegistryStorage()._lastIndex[agentId][clientAddress];
     }
 
     function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
@@ -345,9 +344,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function getClients(uint256 agentId) external view returns (address[] memory) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        return $._clients[agentId];
+    function getClients(uint256 agentId) external view returns (address[] memory clients) {
+        clients = _getReputationRegistryStorage()._clients[agentId];
     }
 
     function _agentExists(uint256 agentId) internal view returns (bool) {

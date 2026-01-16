@@ -176,14 +176,12 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         avgResponse = count > 0 ? uint8(totalResponse / count) : 0;
     }
 
-    function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory) {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        return $._agentValidations[agentId];
+    function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory agentValidations) {
+        agentValidations = _getValidationRegistryStorage()._agentValidations[agentId];
     }
 
-    function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory) {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        return $._validatorRequests[validatorAddress];
+    function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory validatorRequests) {
+        validatorRequests = _getValidationRegistryStorage()._validatorRequests[validatorAddress];
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

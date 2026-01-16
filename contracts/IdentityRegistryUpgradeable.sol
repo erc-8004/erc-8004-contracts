@@ -89,9 +89,8 @@ contract IdentityRegistryUpgradeable is
         }
     }
 
-    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory) {
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        return $._metadata[agentId][metadataKey];
+    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory output) {
+        output = _getIdentityRegistryStorage()._metadata[agentId][metadataKey];
     }
 
     function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
@@ -119,11 +118,10 @@ contract IdentityRegistryUpgradeable is
         emit URIUpdated(agentId, newURI, msg.sender);
     }
 
-    function getAgentWallet(uint256 agentId) external view returns (address) {
+    function getAgentWallet(uint256 agentId) external view returns (address wallet) {
         // Ensure token exists (consistent with other identity reads)
         ownerOf(agentId);
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        return $._agentWallet[agentId];
+        wallet = _getIdentityRegistryStorage()._agentWallet[agentId];
     }
 
     function setAgentWallet(
@@ -168,11 +166,11 @@ contract IdentityRegistryUpgradeable is
      * @dev Override _update to clear agentWallet on transfer.
      * This ensures the verified wallet doesn't persist to new owners.
      */
-    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address result) {
         address from = _ownerOf(tokenId);
 
         // Call parent implementation
-        address result = super._update(to, tokenId, auth);
+        result = super._update(to, tokenId, auth);
 
         // If this is a transfer (not mint), clear agentWallet
         if (from != address(0) && to != address(0)) {
@@ -181,8 +179,6 @@ contract IdentityRegistryUpgradeable is
             $._metadata[tokenId]["agentWallet"] = "";
             emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
         }
-
-        return result;
     }
 
     function getVersion() external pure returns (string memory) {
