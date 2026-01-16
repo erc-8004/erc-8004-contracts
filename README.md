@@ -82,11 +82,6 @@ ERC8004SPEC.md              - Full protocol specification
 npm install
 ```
 
-To install Foundry standard library via npm:
-```shell
-npm i --save-dev forge-std
-```
-
 ## Running Tests
 
 Run all Foundry tests, gas & coverage:
