@@ -68,11 +68,11 @@ contract IdentityRegistryTest is TestBase {
         count = uint8(bound(count, 1, 20));
 
         for (uint256 i; i < count; i++) {
+            vm.expectEmit(true, true, false, true);
+            emit Registered(i, "", caller);
+
             vm.expectEmit(true, true, true, true);
             emit Transfer(address(0), caller, i);
-
-            vm.expectEmit(true, false, true, true);
-            emit Registered(i, "", caller);
 
             vm.prank(caller);
             uint256 agentId = identityRegistry.register();
@@ -115,11 +115,11 @@ contract IdentityRegistryTest is TestBase {
         vm.assume(caller != address(0));
         vm.assume(caller.code.length == 0);
 
+        vm.expectEmit(true, true, false, true);
+        emit Registered(0, uri, caller);
+
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), caller, 0);
-
-        vm.expectEmit(true, false, true, true);
-        emit Registered(0, uri, caller);
 
         vm.prank(caller);
         uint256 agentId = identityRegistry.register(uri);
@@ -152,14 +152,14 @@ contract IdentityRegistryTest is TestBase {
             metadataValue: metadataValue
         });
 
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), caller, 0);
-
-        vm.expectEmit(true, false, true, true);
+        vm.expectEmit(true, true, false, true);
         emit Registered(0, uri, caller);
 
         vm.expectEmit(true, true, false, true);
         emit MetadataSet(0, metadataKey, metadataKey, metadataValue);
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), caller, 0);
 
         vm.prank(caller);
         uint256 agentId = identityRegistry.register(uri, metadata);

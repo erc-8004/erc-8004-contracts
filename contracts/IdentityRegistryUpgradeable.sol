@@ -60,24 +60,28 @@ contract IdentityRegistryUpgradeable is
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+
         $._agentWallet[agentId] = msg.sender;
         emit Registered(agentId, "", msg.sender);
+
+        _safeMint(msg.sender, agentId);
     }
 
     function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+        
         $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
+
+        _safeMint(msg.sender, agentId);
     }
 
     function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+        
         $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
@@ -87,6 +91,8 @@ contract IdentityRegistryUpgradeable is
             $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
             emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
         }
+
+        _safeMint(msg.sender, agentId);
     }
 
     function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory output) {
