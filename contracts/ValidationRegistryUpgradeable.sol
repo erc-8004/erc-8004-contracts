@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 interface IIdentityRegistry {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -10,7 +10,7 @@ interface IIdentityRegistry {
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
-contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+contract ValidationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeable {
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,

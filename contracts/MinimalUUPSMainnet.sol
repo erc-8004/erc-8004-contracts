@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 /**
  * @title MinimalUUPSMainnet
@@ -12,7 +12,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
  * Uses a regular storage slot (slot 0) for identityRegistry, which the real implementations
  * also use (outside their ERC-7201 namespaced storage).
  */
-contract MinimalUUPSMainnet is OwnableUpgradeable, UUPSUpgradeable {
+contract MinimalUUPSMainnet is Ownable2StepUpgradeable, UUPSUpgradeable {
     /// @dev Identity registry address stored at slot 0 (matches real implementations)
     address private _identityRegistry;
 
