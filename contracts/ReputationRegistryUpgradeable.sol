@@ -74,6 +74,13 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
+    modifier validFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex) {
+        require(feedbackIndex > 0, "index must be > 0");
+        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -138,12 +145,9 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
-    function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
+    function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external validFeedback(agentId, msg.sender, feedbackIndex) {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][msg.sender], "index out of bounds");
         require(!$._feedback[agentId][msg.sender][feedbackIndex].isRevoked, "Already revoked");
-
         $._feedback[agentId][msg.sender][feedbackIndex].isRevoked = true;
         emit FeedbackRevoked(agentId, msg.sender, feedbackIndex);
     }
@@ -154,13 +158,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint64 feedbackIndex,
         string calldata responseURI,
         bytes32 responseHash
-    ) external {
+    ) external validFeedback(agentId, clientAddress, feedbackIndex)  {
         require(bytes(responseURI).length > 0, "Empty URI");
-        require(feedbackIndex > 0, "index must be > 0");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
-        
         // Track new responder
         if (!$._responderExists[agentId][clientAddress][feedbackIndex][msg.sender]) {
             $._responders[agentId][clientAddress][feedbackIndex].push(msg.sender);
@@ -180,11 +181,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
         external
         view
+        validFeedback(agentId, clientAddress, feedbackIndex)
         returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
         Feedback storage f = $._feedback[agentId][clientAddress][feedbackIndex];
         return (f.score, f.tag1, f.tag2, f.isRevoked);
     }
