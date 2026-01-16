@@ -62,6 +62,7 @@ contract IdentityRegistryUpgradeable is
         agentId = $._lastId++;
 
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         emit Registered(agentId, "", msg.sender);
 
         _safeMint(msg.sender, agentId);
@@ -72,6 +73,7 @@ contract IdentityRegistryUpgradeable is
         agentId = $._lastId++;
         
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
 
@@ -83,6 +85,7 @@ contract IdentityRegistryUpgradeable is
         agentId = $._lastId++;
         
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
 

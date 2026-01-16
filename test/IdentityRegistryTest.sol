@@ -80,6 +80,7 @@ contract IdentityRegistryTest is TestBase {
             assertEq(agentId, i, "AgentId should be sequential");
             assertEq(identityRegistry.ownerOf(agentId), caller, "Owner mismatch");
             assertEq(identityRegistry.getAgentWallet(agentId), caller, "AgentWallet mismatch");
+            assertEq(identityRegistry.getMetadata(agentId, "agentWallet"), abi.encodePacked(caller));
             assertEq(identityRegistry.tokenURI(agentId), "", "URI should be empty");
         }
 
@@ -97,6 +98,7 @@ contract IdentityRegistryTest is TestBase {
 
         assertEq(identityRegistry.ownerOf(agentId), address(receiver));
         assertEq(identityRegistry.getAgentWallet(agentId), address(receiver));
+        assertEq(identityRegistry.getMetadata(agentId, "agentWallet"), abi.encodePacked(receiver));
     }
 
     function test_register_revertsForNonReceiver() public {
@@ -127,6 +129,7 @@ contract IdentityRegistryTest is TestBase {
         assertEq(agentId, 0, "First agentId should be 0");
         assertEq(identityRegistry.ownerOf(agentId), caller, "Owner mismatch");
         assertEq(identityRegistry.getAgentWallet(agentId), caller, "AgentWallet mismatch");
+        assertEq(identityRegistry.getMetadata(agentId, "agentWallet"), abi.encodePacked(caller));
         assertEq(identityRegistry.balanceOf(caller), 1, "Balance mismatch");
         assertEq(identityRegistry.tokenURI(agentId), uri, "URI mismatch");
     }
@@ -167,6 +170,7 @@ contract IdentityRegistryTest is TestBase {
         assertEq(agentId, 0, "First agentId should be 0");
         assertEq(identityRegistry.ownerOf(agentId), caller, "Owner mismatch");
         assertEq(identityRegistry.getAgentWallet(agentId), caller, "AgentWallet mismatch");
+        assertEq(identityRegistry.getMetadata(agentId, "agentWallet"), abi.encodePacked(caller));
         assertEq(identityRegistry.tokenURI(agentId), uri, "URI mismatch");
         assertEq(identityRegistry.getMetadata(agentId, metadataKey), metadataValue, "Metadata mismatch");
     }
