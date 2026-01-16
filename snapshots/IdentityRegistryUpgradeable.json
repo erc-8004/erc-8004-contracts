@@ -1,12 +1,12 @@
 {
   "getAgentWallet": "855",
-  "getMetadata": "2258",
-  "register()": "98544",
-  "register(string)": "123407",
-  "register(string,MetadataEntry[])": "151560",
-  "setAgentURI": "27386",
-  "setAgentWallet(EOA)": "40157",
-  "setAgentWallet(ERC1271)": "35117",
-  "setMetadata": "28068",
-  "transferFrom": "34141"
+  "getMetadata": "2280",
+  "register()": "121319",
+  "register(string)": "146216",
+  "register(string,MetadataEntry[])": "174357",
+  "setAgentURI": "27352",
+  "setAgentWallet(EOA)": "18247",
+  "setAgentWallet(ERC1271)": "13740",
+  "setMetadata": "28144",
+  "transferFrom": "32205"
 }
