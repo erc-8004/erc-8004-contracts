@@ -1113,6 +1113,20 @@ contract ReputationRegistryTest is TestBase {
         vm.snapshotGasLastCall("ReputationRegistryUpgradeable", "readFeedback");
     }
 
+    function test_readAllFeedback_gas() public {
+        uint256 agentId = _registerAgent(alice);
+
+        vm.prank(bob);
+        reputationRegistry.giveFeedback(agentId, 80, "tag1", "tag2", "", "", bytes32(0));
+
+        vm.prank(charlie);
+        reputationRegistry.giveFeedback(agentId, 90, "tag3", "tag4", "", "", bytes32(0));
+
+        address[] memory noClients = new address[](0);
+        reputationRegistry.readAllFeedback(agentId, noClients, "", "", false);
+        vm.snapshotGasLastCall("ReputationRegistryUpgradeable", "readAllFeedback");
+    }
+
     function test_getSummary_gas() public {
         uint256 agentId = _registerAgent(alice);
 

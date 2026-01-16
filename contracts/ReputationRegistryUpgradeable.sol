@@ -203,7 +203,6 @@ contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeab
 
         uint256 totalScore;
 
-        bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
         for (uint256 i; i < clientList.length; i++) {
@@ -211,9 +210,9 @@ contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeab
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalScore += fb.score;
                 count++;
@@ -246,7 +245,6 @@ contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeab
         }
 
         // First pass: count matching feedback
-        bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
         uint256 totalCount;
@@ -255,9 +253,9 @@ contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeab
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalCount++;
             }
@@ -278,9 +276,9 @@ contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeab
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
