@@ -764,15 +764,15 @@ contract IdentityRegistryTest is TestBase {
         assertEq(identityRegistry.ownerOf(agentId), address(receiver));
     }
 
-    function test_selfTransfer_clearsAgentWallet() public {
-        // Known behavior: self-transfer clears agentWallet due to _update logic
+    function test_selfTransfer_doesntClearAgentWallet() public {
+        // Known behavior: self-transfer doesn't clear agentWallet
         uint256 agentId = _registerAgent(alice);
         assertEq(identityRegistry.getAgentWallet(agentId), alice);
 
         vm.prank(alice);
         identityRegistry.transferFrom(alice, alice, agentId);
 
-        assertEq(identityRegistry.getAgentWallet(agentId), address(0));
+        assertEq(identityRegistry.getAgentWallet(agentId), alice);
         assertEq(identityRegistry.ownerOf(agentId), alice);
     }
 

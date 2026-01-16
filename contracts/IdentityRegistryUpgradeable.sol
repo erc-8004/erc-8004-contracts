@@ -179,8 +179,8 @@ contract IdentityRegistryUpgradeable is
         // Call parent implementation
         result = super._update(to, tokenId, auth);
 
-        // If this is a transfer (not mint), clear agentWallet
-        if (from != address(0) && to != address(0)) {
+        // If this is a transfer to a different user (not self-transfer or mint/burn), clear agentWallet
+        if (from != address(0) && to != address(0) && from != to) {
             IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
             $._agentWallet[tokenId] = address(0);
             $._metadata[tokenId]["agentWallet"] = "";
