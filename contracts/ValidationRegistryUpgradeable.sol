@@ -146,18 +146,17 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata tag
     ) external view returns (uint64 count, uint8 avgResponse) {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        uint256 totalResponse = 0;
-        count = 0;
+        uint256 totalResponse;
 
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
-        for (uint256 i = 0; i < requestHashes.length; i++) {
+        for (uint256 i; i < requestHashes.length; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified
             bool matchValidator = (validatorAddresses.length == 0);
             if (!matchValidator) {
-                for (uint256 j = 0; j < validatorAddresses.length; j++) {
+                for (uint256 j; j < validatorAddresses.length; j++) {
                     if (s.validatorAddress == validatorAddresses[j]) {
                         matchValidator = true;
                         break;

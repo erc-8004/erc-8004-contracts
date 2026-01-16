@@ -203,13 +203,12 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             clientList = $._clients[agentId];
         }
 
-        uint256 totalScore = 0;
-        count = 0;
+        uint256 totalScore;
 
         bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
-        for (uint256 i = 0; i < clientList.length; i++) {
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -252,8 +251,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
-        uint256 totalCount = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        uint256 totalCount;
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -275,8 +274,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         revokedStatuses = new bool[](totalCount);
 
         // Second pass: populate arrays
-        uint256 idx = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        uint256 idx;
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -307,7 +306,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (clientAddress == address(0)) {
             // Count all responses for all clients
             address[] memory clients = $._clients[agentId];
-            for (uint256 i = 0; i < clients.length; i++) {
+            for (uint256 i; i < clients.length; i++) {
                 uint64 lastIdx = $._lastIndex[agentId][clients[i]];
                 for (uint64 j = 1; j <= lastIdx; j++) {
                     count += _countResponses(agentId, clients[i], j, responders);
@@ -335,12 +334,12 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (responders.length == 0) {
             // Count from all responders
             address[] memory allResponders = $._responders[agentId][clientAddress][feedbackIndex];
-            for (uint256 k = 0; k < allResponders.length; k++) {
+            for (uint256 k; k < allResponders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][allResponders[k]];
             }
         } else {
             // Count from specified responders
-            for (uint256 k = 0; k < responders.length; k++) {
+            for (uint256 k; k < responders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][responders[k]];
             }
         }

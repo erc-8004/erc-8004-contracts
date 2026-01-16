@@ -82,7 +82,7 @@ contract IdentityRegistryUpgradeable is
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
 
-        for (uint256 i = 0; i < metadata.length; i++) {
+        for (uint256 i; i < metadata.length; i++) {
             require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
             $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
             emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
