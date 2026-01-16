@@ -103,12 +103,8 @@ contract IdentityRegistryUpgradeable is
     }
 
     function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
-        require(
-            msg.sender == _ownerOf(agentId) ||
-            isApprovedForAll(_ownerOf(agentId), msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
+        _onlyOwnerOrOperator(agentId);
+
         require(keccak256(bytes(metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._metadata[agentId][metadataKey] = metadataValue;
@@ -116,13 +112,7 @@ contract IdentityRegistryUpgradeable is
     }
 
     function setAgentURI(uint256 agentId, string calldata newURI) external {
-        address owner = ownerOf(agentId);
-        require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
+        _onlyOwnerOrOperator(agentId);
         _setTokenURI(agentId, newURI);
         emit URIUpdated(agentId, newURI, msg.sender);
     }
@@ -143,15 +133,9 @@ contract IdentityRegistryUpgradeable is
         require(block.timestamp <= deadline, "expired");
         require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, "deadline too far");
 
-        address owner = ownerOf(agentId);
-        require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
+        address agentOwner = _onlyOwnerOrOperator(agentId);
 
-        bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
+        bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, agentOwner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);
 
         if (newWallet.code.length == 0) {
@@ -168,6 +152,18 @@ contract IdentityRegistryUpgradeable is
         // Also store as reserved metadata for discoverability/indexers.
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);
         emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(newWallet));
+    }
+
+    function _onlyOwnerOrOperator(uint256 agentId) internal view returns(address nftOwner) {
+        // enforces nft existence & ownership
+        nftOwner = ownerOf(agentId);
+
+        require(
+            msg.sender == nftOwner ||
+            isApprovedForAll(nftOwner, msg.sender) ||
+            msg.sender == _getApproved(agentId),
+            "Not authorized"
+        );
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
