@@ -41,3 +41,8 @@ Thumbs.db
 
 # Test output
 /test-results
+
+# Foundry artifacts
+/forge-out
+lcov.info
+coverage-report/
