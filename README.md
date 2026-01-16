@@ -84,7 +84,21 @@ npm install
 
 ## Running Tests
 
-Run all tests:
+Run all Foundry tests, gas & coverage:
+```shell
+forge test
+# view gas in snapshots/*
+
+# basic coverage
+forge coverage --ir-minimum --no-match-coverage "test/*"
+
+# detailed line coverage
+forge coverage --ir-minimum --no-match-coverage "test/*" --report lcov
+genhtml lcov.info -o coverage-report
+# open coverage-report/index.html
+```
+
+Run all Hardhat tests:
 ```shell
 npm test
 ```

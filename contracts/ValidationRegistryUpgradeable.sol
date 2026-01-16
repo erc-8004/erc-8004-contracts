@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 interface IIdentityRegistry {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -10,7 +10,7 @@ interface IIdentityRegistry {
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
-contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+contract ValidationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeable {
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,
@@ -30,25 +30,24 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     struct ValidationStatus {
         address validatorAddress;
+        uint8 response;       // 0..MAX_RESPONSE
+        bool hasResponse;
         uint256 agentId;
-        uint8 response;       // 0..100
         bytes32 responseHash;
         string tag;
         uint256 lastUpdate;
-        bool hasResponse;
     }
+
+    uint8 public constant MAX_RESPONSE = 100;
 
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
     address private _identityRegistry;
 
     /// @custom:storage-location erc7201:erc8004.validation.registry
     struct ValidationRegistryStorage {
-        // requestHash => validation status
-        mapping(bytes32 => ValidationStatus) validations;
-        // agentId => list of requestHashes
-        mapping(uint256 => bytes32[]) _agentValidations;
-        // validatorAddress => list of requestHashes
-        mapping(address => bytes32[]) _validatorRequests;
+        mapping(bytes32 requestHash      => ValidationStatus) validations;
+        mapping(uint256 agentId          => bytes32[] requestHashes) _agentValidations;
+        mapping(address validatorAddress => bytes32[] requestHashes) _validatorRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.validation.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -119,17 +118,19 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 responseHash,
         string calldata tag
     ) external {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        ValidationStatus storage s = $.validations[requestHash];
-        require(s.validatorAddress != address(0), "unknown");
-        require(msg.sender == s.validatorAddress, "not validator");
-        require(response <= 100, "resp>100");
+        require(response <= MAX_RESPONSE, "resp>100");
+
+        ValidationStatus storage s = _getValidationRegistryStorage().validations[requestHash];
+        address validatorAddress = s.validatorAddress;
+        require(validatorAddress != address(0), "unknown");
+        require(msg.sender == validatorAddress, "not validator");
+        
         s.response = response;
         s.responseHash = responseHash;
         s.tag = tag;
         s.lastUpdate = block.timestamp;
         s.hasResponse = true;
-        emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseURI, responseHash, tag);
+        emit ValidationResponse(validatorAddress, s.agentId, requestHash, response, responseURI, responseHash, tag);
     }
 
     function getValidationStatus(bytes32 requestHash)
@@ -137,10 +138,17 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         view
         returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
     {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        ValidationStatus memory s = $.validations[requestHash];
-        require(s.validatorAddress != address(0), "unknown");
-        return (s.validatorAddress, s.agentId, s.response, s.responseHash, s.tag, s.lastUpdate);
+        // get storage reference
+        ValidationStatus storage s = _getValidationRegistryStorage().validations[requestHash];
+
+        // read first slot
+        (validatorAddress, response) = (s.validatorAddress, s.response);
+
+        // revert if invalid address
+        require(validatorAddress != address(0), "unknown");
+
+        // read remaining slots
+        (agentId, responseHash, tag, lastUpdate) = (s.agentId, s.responseHash, s.tag, s.lastUpdate);
     }
 
     function getSummary(
@@ -149,18 +157,18 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata tag
     ) external view returns (uint64 count, uint8 avgResponse) {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        uint256 totalResponse = 0;
-        count = 0;
+        uint256 totalResponse;
 
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
-        for (uint256 i = 0; i < requestHashes.length; i++) {
+        uint256 requestHashesLength = requestHashes.length;
+        for (uint256 i; i < requestHashesLength; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified
             bool matchValidator = (validatorAddresses.length == 0);
             if (!matchValidator) {
-                for (uint256 j = 0; j < validatorAddresses.length; j++) {
+                for (uint256 j; j < validatorAddresses.length; j++) {
                     if (s.validatorAddress == validatorAddresses[j]) {
                         matchValidator = true;
                         break;
@@ -169,7 +177,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             }
 
             // Filter by tag (empty string means no filter)
-            bool matchTag = (keccak256(bytes(tag)) == keccak256(bytes(""))) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
+            bool matchTag = (bytes(tag).length == 0) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
 
             if (matchValidator && matchTag && s.hasResponse) {
                 totalResponse += s.response;
@@ -180,14 +188,12 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         avgResponse = count > 0 ? uint8(totalResponse / count) : 0;
     }
 
-    function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory) {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        return $._agentValidations[agentId];
+    function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory agentValidations) {
+        agentValidations = _getValidationRegistryStorage()._agentValidations[agentId];
     }
 
-    function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory) {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        return $._validatorRequests[validatorAddress];
+    function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory validatorRequests) {
+        validatorRequests = _getValidationRegistryStorage()._validatorRequests[validatorAddress];
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

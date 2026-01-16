@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 interface IIdentityRegistry {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -11,7 +11,7 @@ interface IIdentityRegistry {
     function getApproved(uint256 tokenId) external view returns (address);
 }
 
-contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+contract ReputationRegistryUpgradeable is Ownable2StepUpgradeable, UUPSUpgradeable {
 
     event NewFeedback(
         uint256 indexed agentId,
@@ -43,28 +43,25 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     struct Feedback {
         uint8 score;
+        bool isRevoked;
         string tag1;
         string tag2;
-        bool isRevoked;
     }
+
+    uint8 public constant MAX_SCORE = 100;
 
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
     address private _identityRegistry;
 
     /// @custom:storage-location erc7201:erc8004.reputation.registry
     struct ReputationRegistryStorage {
-        // agentId => clientAddress => feedbackIndex => Feedback (1-indexed)
-        mapping(uint256 => mapping(address => mapping(uint64 => Feedback))) _feedback;
-        // agentId => clientAddress => last feedback index
-        mapping(uint256 => mapping(address => uint64)) _lastIndex;
-        // agentId => clientAddress => feedbackIndex => responder => response count
-        mapping(uint256 => mapping(address => mapping(uint64 => mapping(address => uint64)))) _responseCount;
-        // Track all unique responders for each feedback
-        mapping(uint256 => mapping(address => mapping(uint64 => address[]))) _responders;
-        mapping(uint256 => mapping(address => mapping(uint64 => mapping(address => bool)))) _responderExists;
-        // Track all unique clients that have given feedback for each agent
-        mapping(uint256 => address[]) _clients;
-        mapping(uint256 => mapping(address => bool)) _clientExists;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => Feedback))) _feedback;
+        mapping(uint256 agentId => mapping(address clientAddress => uint64 lastFeedbackIndex)) _lastIndex;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => mapping(address reponderAddress => uint64 responseCount)))) _responseCount;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => address[] responderAddresses))) _responders;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => mapping(address responderAddress => bool existsInd)))) _responderExists;
+        mapping(uint256 agentId => address[] clientAddresses) _clients;
+        mapping(uint256 agentId => mapping(address clientAddress => bool existsInd)) _clientExists;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.reputation.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -75,6 +72,13 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         assembly {
             $.slot := REPUTATION_REGISTRY_STORAGE_LOCATION
         }
+    }
+
+    modifier validFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex) {
+        require(feedbackIndex > 0, "index must be > 0");
+        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        _;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -100,16 +104,15 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata feedbackURI,
         bytes32 feedbackHash
     ) external {
-        require(score <= 100, "score>100");
+        require(score <= MAX_SCORE, "score>100");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
-        // Verify agent exists
-        require(_agentExists(agentId), "Agent does not exist");
-
         // Get agent owner
         IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
-        address agentOwner = registry.ownerOf(agentId);
+        address agentOwner;
+        try registry.ownerOf(agentId) returns (address _owner) {agentOwner = _owner;} catch {}
+        require(agentOwner != address(0), "Agent does not exist");
 
         // SECURITY: Prevent self-feedback from owner and operators
         require(
@@ -119,8 +122,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             "Self-feedback not allowed"
         );
 
-        // Get current index for this client-agent pair (1-indexed)
-        uint64 currentIndex = $._lastIndex[agentId][msg.sender] + 1;
+        // increment then read current index for this client-agent pair (1-indexed)
+        uint64 currentIndex = ++$._lastIndex[agentId][msg.sender];
 
         // Store feedback at 1-indexed position
         $._feedback[agentId][msg.sender][currentIndex] = Feedback({
@@ -129,9 +132,6 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             tag2: tag2,
             isRevoked: false
         });
-
-        // Update last index
-        $._lastIndex[agentId][msg.sender] = currentIndex;
 
         // track new client
         if (!$._clientExists[agentId][msg.sender]) {
@@ -142,12 +142,9 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
-    function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
+    function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external validFeedback(agentId, msg.sender, feedbackIndex) {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][msg.sender], "index out of bounds");
         require(!$._feedback[agentId][msg.sender][feedbackIndex].isRevoked, "Already revoked");
-
         $._feedback[agentId][msg.sender][feedbackIndex].isRevoked = true;
         emit FeedbackRevoked(agentId, msg.sender, feedbackIndex);
     }
@@ -158,12 +155,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint64 feedbackIndex,
         string calldata responseURI,
         bytes32 responseHash
-    ) external {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+    ) external validFeedback(agentId, clientAddress, feedbackIndex)  {
         require(bytes(responseURI).length > 0, "Empty URI");
 
+        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         // Track new responder
         if (!$._responderExists[agentId][clientAddress][feedbackIndex][msg.sender]) {
             $._responders[agentId][clientAddress][feedbackIndex].push(msg.sender);
@@ -176,19 +171,17 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         emit ResponseAppended(agentId, clientAddress, feedbackIndex, msg.sender, responseURI, responseHash);
     }
 
-    function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        return $._lastIndex[agentId][clientAddress];
+    function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64 lastIndex) {
+        lastIndex = _getReputationRegistryStorage()._lastIndex[agentId][clientAddress];
     }
 
     function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
         external
         view
+        validFeedback(agentId, clientAddress, feedbackIndex)
         returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
         Feedback storage f = $._feedback[agentId][clientAddress][feedbackIndex];
         return (f.score, f.tag1, f.tag2, f.isRevoked);
     }
@@ -208,20 +201,18 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             clientList = $._clients[agentId];
         }
 
-        uint256 totalScore = 0;
-        count = 0;
+        uint256 totalScore;
 
-        bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
-        for (uint256 i = 0; i < clientList.length; i++) {
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalScore += fb.score;
                 count++;
@@ -254,18 +245,17 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // First pass: count matching feedback
-        bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
-        uint256 totalCount = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        uint256 totalCount;
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalCount++;
             }
@@ -280,15 +270,15 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         revokedStatuses = new bool[](totalCount);
 
         // Second pass: populate arrays
-        uint256 idx = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        uint256 idx;
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
+                if (bytes(tag1).length != 0 &&
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
+                if (bytes(tag2).length != 0 &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
@@ -312,7 +302,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (clientAddress == address(0)) {
             // Count all responses for all clients
             address[] memory clients = $._clients[agentId];
-            for (uint256 i = 0; i < clients.length; i++) {
+            for (uint256 i; i < clients.length; i++) {
                 uint64 lastIdx = $._lastIndex[agentId][clients[i]];
                 for (uint64 j = 1; j <= lastIdx; j++) {
                     count += _countResponses(agentId, clients[i], j, responders);
@@ -340,28 +330,19 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (responders.length == 0) {
             // Count from all responders
             address[] memory allResponders = $._responders[agentId][clientAddress][feedbackIndex];
-            for (uint256 k = 0; k < allResponders.length; k++) {
+            for (uint256 k; k < allResponders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][allResponders[k]];
             }
         } else {
             // Count from specified responders
-            for (uint256 k = 0; k < responders.length; k++) {
+            for (uint256 k; k < responders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][responders[k]];
             }
         }
     }
 
-    function getClients(uint256 agentId) external view returns (address[] memory) {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        return $._clients[agentId];
-    }
-
-    function _agentExists(uint256 agentId) internal view returns (bool) {
-        try IIdentityRegistry(_identityRegistry).ownerOf(agentId) returns (address owner) {
-            return owner != address(0);
-        } catch {
-            return false;
-        }
+    function getClients(uint256 agentId) external view returns (address[] memory clients) {
+        clients = _getReputationRegistryStorage()._clients[agentId];
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

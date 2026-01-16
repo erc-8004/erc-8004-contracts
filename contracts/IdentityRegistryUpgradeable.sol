@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 contract IdentityRegistryUpgradeable is
     ERC721URIStorageUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     UUPSUpgradeable,
     EIP712Upgradeable
 {
@@ -22,10 +22,8 @@ contract IdentityRegistryUpgradeable is
     /// @custom:storage-location erc7201:erc8004.identity.registry
     struct IdentityRegistryStorage {
         uint256 _lastId;
-        // agentId => metadataKey => metadataValue
-        mapping(uint256 => mapping(string => bytes)) _metadata;
-        // agentId => verified agent wallet (address-typed convenience)
-        mapping(uint256 => address) _agentWallet;
+        mapping(uint256 agentId => mapping(string metadataKey => bytes metadataValue)) _metadata;
+        mapping(uint256 agentId => address verifiedWallet) _agentWallet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -44,7 +42,6 @@ contract IdentityRegistryUpgradeable is
 
     bytes32 private constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
-    bytes4 private constant ERC1271_MAGICVALUE = 0x1626ba7e;
     uint256 private constant MAX_DEADLINE_DELAY = 5 minutes;
     bytes32 private constant RESERVED_AGENT_WALLET_KEY_HASH = keccak256("agentWallet");
 
@@ -62,47 +59,51 @@ contract IdentityRegistryUpgradeable is
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         emit Registered(agentId, "", msg.sender);
+
+        _safeMint(msg.sender, agentId);
     }
 
     function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+        
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
+
+        _safeMint(msg.sender, agentId);
     }
 
     function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        _safeMint(msg.sender, agentId);
+        
         $._agentWallet[agentId] = msg.sender;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
 
-        for (uint256 i = 0; i < metadata.length; i++) {
+        for (uint256 i; i < metadata.length; i++) {
             require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
             $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
             emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
         }
+
+        _safeMint(msg.sender, agentId);
     }
 
-    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory) {
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        return $._metadata[agentId][metadataKey];
+    function getMetadata(uint256 agentId, string memory metadataKey) external view returns (bytes memory output) {
+        output = _getIdentityRegistryStorage()._metadata[agentId][metadataKey];
     }
 
     function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
-        require(
-            msg.sender == _ownerOf(agentId) ||
-            isApprovedForAll(_ownerOf(agentId), msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
+        _onlyOwnerOrOperator(agentId);
+
         require(keccak256(bytes(metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._metadata[agentId][metadataKey] = metadataValue;
@@ -110,22 +111,15 @@ contract IdentityRegistryUpgradeable is
     }
 
     function setAgentURI(uint256 agentId, string calldata newURI) external {
-        address owner = ownerOf(agentId);
-        require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
+        _onlyOwnerOrOperator(agentId);
         _setTokenURI(agentId, newURI);
         emit URIUpdated(agentId, newURI, msg.sender);
     }
 
-    function getAgentWallet(uint256 agentId) external view returns (address) {
+    function getAgentWallet(uint256 agentId) external view returns (address wallet) {
         // Ensure token exists (consistent with other identity reads)
         ownerOf(agentId);
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        return $._agentWallet[agentId];
+        wallet = _getIdentityRegistryStorage()._agentWallet[agentId];
     }
 
     function setAgentWallet(
@@ -134,27 +128,17 @@ contract IdentityRegistryUpgradeable is
         uint256 deadline,
         bytes calldata signature
     ) external {
-        address owner = ownerOf(agentId);
-        require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
-        );
         require(newWallet != address(0), "bad wallet");
         require(block.timestamp <= deadline, "expired");
         require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, "deadline too far");
 
-        bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
+        address agentOwner = _onlyOwnerOrOperator(agentId);
+
+        bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, agentOwner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);
 
-        if (newWallet.code.length == 0) {
-            address recovered = ECDSA.recover(digest, signature);
-            require(recovered == newWallet, "invalid wallet sig");
-        } else {
-            bytes4 result = IERC1271(newWallet).isValidSignature(digest, signature);
-            require(result == ERC1271_MAGICVALUE, "invalid wallet sig");
-        }
+        // for ERC1271 uses a staticcall so storage updates afterwards are safer
+        require(SignatureChecker.isValidSignatureNow(newWallet, digest, signature), "invalid wallet sig");
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._agentWallet[agentId] = newWallet;
@@ -164,27 +148,37 @@ contract IdentityRegistryUpgradeable is
         emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(newWallet));
     }
 
+    function _onlyOwnerOrOperator(uint256 agentId) internal view returns(address nftOwner) {
+        // enforces nft existence & ownership
+        nftOwner = ownerOf(agentId);
+
+        require(
+            msg.sender == nftOwner ||
+            isApprovedForAll(nftOwner, msg.sender) ||
+            msg.sender == _getApproved(agentId),
+            "Not authorized"
+        );
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @dev Override _update to clear agentWallet on transfer.
      * This ensures the verified wallet doesn't persist to new owners.
      */
-    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address result) {
         address from = _ownerOf(tokenId);
 
         // Call parent implementation
-        address result = super._update(to, tokenId, auth);
+        result = super._update(to, tokenId, auth);
 
-        // If this is a transfer (not mint), clear agentWallet
-        if (from != address(0) && to != address(0)) {
+        // If this is a transfer to a different user (not self-transfer or mint/burn), clear agentWallet
+        if (from != address(0) && to != address(0) && from != to) {
             IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
             $._agentWallet[tokenId] = address(0);
             $._metadata[tokenId]["agentWallet"] = "";
             emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
         }
-
-        return result;
     }
 
     function getVersion() external pure returns (string memory) {
