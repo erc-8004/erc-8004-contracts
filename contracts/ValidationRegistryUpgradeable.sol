@@ -175,7 +175,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             }
 
             // Filter by tag (empty string means no filter)
-            bool matchTag = (keccak256(bytes(tag)) == keccak256(bytes(""))) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
+            bool matchTag = (bytes(tag).length == 0) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
 
             if (matchValidator && matchTag && s.hasResponse) {
                 totalResponse += s.response;
