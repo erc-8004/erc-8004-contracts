@@ -30,13 +30,15 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     struct ValidationStatus {
         address validatorAddress;
-        uint8 response;       // 0..100
+        uint8 response;       // 0..MAX_RESPONSE
         bool hasResponse;
         uint256 agentId;
         bytes32 responseHash;
         string tag;
         uint256 lastUpdate;
     }
+
+    uint8 public constant MAX_RESPONSE = 100;
 
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
     address private _identityRegistry;
@@ -116,7 +118,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 responseHash,
         string calldata tag
     ) external {
-        require(response <= 100, "resp>100");
+        require(response <= MAX_RESPONSE, "resp>100");
 
         ValidationStatus storage s = _getValidationRegistryStorage().validations[requestHash];
         address validatorAddress = s.validatorAddress;

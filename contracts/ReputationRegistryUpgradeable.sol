@@ -48,6 +48,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string tag2;
     }
 
+    uint8 public constant MAX_SCORE = 100;
+
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
     address private _identityRegistry;
 
@@ -95,7 +97,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata feedbackURI,
         bytes32 feedbackHash
     ) external {
-        require(score <= 100, "score>100");
+        require(score <= MAX_SCORE, "score>100");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
