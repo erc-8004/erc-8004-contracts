@@ -116,17 +116,18 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 responseHash,
         string calldata tag
     ) external {
-        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        ValidationStatus storage s = $.validations[requestHash];
-        require(s.validatorAddress != address(0), "unknown");
-        require(msg.sender == s.validatorAddress, "not validator");
+        ValidationStatus storage s = _getValidationRegistryStorage().validations[requestHash];
+        address validatorAddress = s.validatorAddress;
+
+        require(validatorAddress != address(0), "unknown");
+        require(msg.sender == validatorAddress, "not validator");
         require(response <= 100, "resp>100");
         s.response = response;
         s.responseHash = responseHash;
         s.tag = tag;
         s.lastUpdate = block.timestamp;
         s.hasResponse = true;
-        emit ValidationResponse(s.validatorAddress, s.agentId, requestHash, response, responseURI, responseHash, tag);
+        emit ValidationResponse(validatorAddress, s.agentId, requestHash, response, responseURI, responseHash, tag);
     }
 
     function getValidationStatus(bytes32 requestHash)
@@ -150,7 +151,8 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
-        for (uint256 i; i < requestHashes.length; i++) {
+        uint256 requestHashesLength = requestHashes.length;
+        for (uint256 i; i < requestHashesLength; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified
