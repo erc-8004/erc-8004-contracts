@@ -9,6 +9,8 @@ remappings = [
     "forge-std/=node_modules/forge-std/src/",
     "hardhat/=node_modules/hardhat/",
 ]
+optimizer = true
+optimizer_runs = 1_000_000
 via_ir = true
 show_progress = true
 
