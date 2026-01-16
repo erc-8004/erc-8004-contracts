@@ -99,12 +99,11 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
-        // Verify agent exists
-        require(_agentExists(agentId), "Agent does not exist");
-
         // Get agent owner
         IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
-        address agentOwner = registry.ownerOf(agentId);
+        address agentOwner;
+        try registry.ownerOf(agentId) returns (address _owner) {agentOwner = _owner;} catch {}
+        require(agentOwner != address(0), "Agent does not exist");
 
         // SECURITY: Prevent self-feedback from owner and operators
         require(
@@ -347,14 +346,6 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     function getClients(uint256 agentId) external view returns (address[] memory clients) {
         clients = _getReputationRegistryStorage()._clients[agentId];
-    }
-
-    function _agentExists(uint256 agentId) internal view returns (bool) {
-        try IIdentityRegistry(_identityRegistry).ownerOf(agentId) returns (address owner) {
-            return owner != address(0);
-        } catch {
-            return false;
-        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
