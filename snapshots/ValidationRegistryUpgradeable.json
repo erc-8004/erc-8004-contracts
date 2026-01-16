@@ -1,9 +1,9 @@
 {
-  "getAgentValidations": "2724",
-  "getSummary": "8442",
-  "getValidationStatus": "5651",
-  "getValidatorRequests": "2749",
-  "validationRequest": "164960",
-  "validationResponse": "90337",
-  "validationResponse (update)": "50537"
+  "getAgentValidations": "1362",
+  "getSummary": "3811",
+  "getValidationStatus": "2563",
+  "getValidatorRequests": "1350",
+  "validationRequest": "157386",
+  "validationResponse": "86501",
+  "validationResponse (update)": "46701"
 }

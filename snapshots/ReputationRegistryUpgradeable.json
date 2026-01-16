@@ -1,12 +1,12 @@
 {
-  "appendResponse": "100436",
-  "appendResponse (second)": "9867",
-  "getClients": "2790",
-  "getLastIndex": "2395",
-  "getResponseCount": "5849",
-  "getSummary": "12288",
-  "giveFeedback": "199019",
-  "giveFeedback (second)": "57868",
-  "readFeedback": "5503",
-  "revokeFeedback": "26212"
+  "appendResponse": "94686",
+  "appendResponse (second)": "5836",
+  "getClients": "1313",
+  "getLastIndex": "1115",
+  "getResponseCount": "2450",
+  "getSummary": "5483",
+  "giveFeedback": "184346",
+  "giveFeedback (second)": "44305",
+  "readFeedback": "2758",
+  "revokeFeedback": "23398"
 }
