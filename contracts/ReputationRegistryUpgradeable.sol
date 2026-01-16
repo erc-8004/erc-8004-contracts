@@ -53,18 +53,13 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     /// @custom:storage-location erc7201:erc8004.reputation.registry
     struct ReputationRegistryStorage {
-        // agentId => clientAddress => feedbackIndex => Feedback (1-indexed)
-        mapping(uint256 => mapping(address => mapping(uint64 => Feedback))) _feedback;
-        // agentId => clientAddress => last feedback index
-        mapping(uint256 => mapping(address => uint64)) _lastIndex;
-        // agentId => clientAddress => feedbackIndex => responder => response count
-        mapping(uint256 => mapping(address => mapping(uint64 => mapping(address => uint64)))) _responseCount;
-        // Track all unique responders for each feedback
-        mapping(uint256 => mapping(address => mapping(uint64 => address[]))) _responders;
-        mapping(uint256 => mapping(address => mapping(uint64 => mapping(address => bool)))) _responderExists;
-        // Track all unique clients that have given feedback for each agent
-        mapping(uint256 => address[]) _clients;
-        mapping(uint256 => mapping(address => bool)) _clientExists;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => Feedback))) _feedback;
+        mapping(uint256 agentId => mapping(address clientAddress => uint64 lastFeedbackIndex)) _lastIndex;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => mapping(address reponderAddress => uint64 responseCount)))) _responseCount;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => address[] responderAddresses))) _responders;
+        mapping(uint256 agentId => mapping(address clientAddress => mapping(uint64 feedbackIndex => mapping(address responderAddress => bool existsInd)))) _responderExists;
+        mapping(uint256 agentId => address[] clientAddresses) _clients;
+        mapping(uint256 agentId => mapping(address clientAddress => bool existsInd)) _clientExists;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.reputation.registry")) - 1)) & ~bytes32(uint256(0xff))

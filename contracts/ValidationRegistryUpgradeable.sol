@@ -43,12 +43,9 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     /// @custom:storage-location erc7201:erc8004.validation.registry
     struct ValidationRegistryStorage {
-        // requestHash => validation status
-        mapping(bytes32 => ValidationStatus) validations;
-        // agentId => list of requestHashes
-        mapping(uint256 => bytes32[]) _agentValidations;
-        // validatorAddress => list of requestHashes
-        mapping(address => bytes32[]) _validatorRequests;
+        mapping(bytes32 requestHash      => ValidationStatus) validations;
+        mapping(uint256 agentId          => bytes32[] requestHashes) _agentValidations;
+        mapping(address validatorAddress => bytes32[] requestHashes) _validatorRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.validation.registry")) - 1)) & ~bytes32(uint256(0xff))

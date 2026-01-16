@@ -22,10 +22,8 @@ contract IdentityRegistryUpgradeable is
     /// @custom:storage-location erc7201:erc8004.identity.registry
     struct IdentityRegistryStorage {
         uint256 _lastId;
-        // agentId => metadataKey => metadataValue
-        mapping(uint256 => mapping(string => bytes)) _metadata;
-        // agentId => verified agent wallet (address-typed convenience)
-        mapping(uint256 => address) _agentWallet;
+        mapping(uint256 agentId => mapping(string metadataKey => bytes metadataValue)) _metadata;
+        mapping(uint256 agentId => address verifiedWallet) _agentWallet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
