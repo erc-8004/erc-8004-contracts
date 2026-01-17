@@ -33,10 +33,27 @@ describe("ERC8004 Registries", async function () {
     return ("0xc4d66de8" + params.slice(2)) as `0x${string}`;
   }
 
-  // Helper to deploy IdentityRegistry proxy
+  // Helper to encode upgradeToAndCall(address, bytes)
+  function encodeUpgradeToAndCall(newImpl: `0x${string}`, data: `0x${string}`): `0x${string}` {
+    const params = encodeAbiParameters(
+      [{ type: "address" }, { type: "bytes" }],
+      [newImpl, data]
+    );
+    return ("0x4f1ef286" + params.slice(2)) as `0x${string}`;
+  }
+
+  // Helper to deploy IdentityRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
   async function deployIdentityRegistryProxy() {
-    const impl = await viem.deployContract("IdentityRegistryUpgradeable");
-    const proxy = await deployProxy(impl.address, encodeInitialize());
+    // Deploy HardhatMinimalUUPS and create proxy with it (sets msg.sender as owner)
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress("0x0000000000000000000000000000000000000000");
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    // Deploy real implementation and upgrade
+    const realImpl = await viem.deployContract("IdentityRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, encodeInitialize()]);
+
     // Get contract instance through proxy
     const identityRegistry = await viem.getContractAt(
       "IdentityRegistryUpgradeable",
@@ -45,11 +62,19 @@ describe("ERC8004 Registries", async function () {
     return identityRegistry;
   }
 
-  // Helper to deploy ReputationRegistry proxy
+  // Helper to deploy ReputationRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
   async function deployReputationRegistryProxy(identityRegistryAddress: `0x${string}`) {
-    const impl = await viem.deployContract("ReputationRegistryUpgradeable");
-    const initCalldata = encodeInitializeWithAddress(identityRegistryAddress);
-    const proxy = await deployProxy(impl.address, initCalldata);
+    // Deploy HardhatMinimalUUPS and create proxy with it (sets msg.sender as owner)
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    // Deploy real implementation and upgrade
+    const realImpl = await viem.deployContract("ReputationRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    const reinitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, reinitCalldata]);
+
     // Get contract instance through proxy
     const reputationRegistry = await viem.getContractAt(
       "ReputationRegistryUpgradeable",
@@ -58,11 +83,19 @@ describe("ERC8004 Registries", async function () {
     return reputationRegistry;
   }
 
-  // Helper to deploy ValidationRegistry proxy
+  // Helper to deploy ValidationRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
   async function deployValidationRegistryProxy(identityRegistryAddress: `0x${string}`) {
-    const impl = await viem.deployContract("ValidationRegistryUpgradeable");
-    const initCalldata = encodeInitializeWithAddress(identityRegistryAddress);
-    const proxy = await deployProxy(impl.address, initCalldata);
+    // Deploy HardhatMinimalUUPS and create proxy with it (sets msg.sender as owner)
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    // Deploy real implementation and upgrade
+    const realImpl = await viem.deployContract("ValidationRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    const reinitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, reinitCalldata]);
+
     // Get contract instance through proxy
     const validationRegistry = await viem.getContractAt(
       "ValidationRegistryUpgradeable",
@@ -656,7 +689,7 @@ describe("ERC8004 Registries", async function () {
         ], { account: client.account }),
         reputationRegistry,
         "NewFeedback",
-        [agentId, getAddress(client.account.address), 1n, score, keccak256(toHex(tag1)), tag2, endpoint, fileuri, filehash]
+        [agentId, getAddress(client.account.address), 1n, score, keccak256(toHex(tag1)), tag1, tag2, endpoint, fileuri, filehash]
       );
 
       // Read feedback back (use 1-based index)

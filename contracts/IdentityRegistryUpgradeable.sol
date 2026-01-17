@@ -22,10 +22,10 @@ contract IdentityRegistryUpgradeable is
     /// @custom:storage-location erc7201:erc8004.identity.registry
     struct IdentityRegistryStorage {
         uint256 _lastId;
-        // agentId => metadataKey => metadataValue
+        // agentId => metadataKey => metadataValue (includes "agentWallet")
         mapping(uint256 => mapping(string => bytes)) _metadata;
-        // agentId => verified agent wallet (address-typed convenience)
-        mapping(uint256 => address) _agentWallet;
+        // DEPRECATED: kept for storage layout compatibility, use metadata["agentWallet"] instead
+        mapping(uint256 => address) _deprecatedAgentWallet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -62,27 +62,30 @@ contract IdentityRegistryUpgradeable is
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
-        $._agentWallet[agentId] = msg.sender;
         emit Registered(agentId, "", msg.sender);
+        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
     }
 
     function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
-        $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
+        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
     }
 
     function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
+        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
-        $._agentWallet[agentId] = msg.sender;
         _setTokenURI(agentId, agentURI);
         emit Registered(agentId, agentURI, msg.sender);
+        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
 
         for (uint256 i = 0; i < metadata.length; i++) {
             require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
@@ -125,7 +128,9 @@ contract IdentityRegistryUpgradeable is
         // Ensure token exists (consistent with other identity reads)
         ownerOf(agentId);
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        return $._agentWallet[agentId];
+        bytes memory data = $._metadata[agentId]["agentWallet"];
+        if (data.length == 0) return address(0);
+        return address(bytes20(data));
     }
 
     function setAgentWallet(
@@ -157,9 +162,6 @@ contract IdentityRegistryUpgradeable is
         }
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        $._agentWallet[agentId] = newWallet;
-
-        // Also store as reserved metadata for discoverability/indexers.
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);
         emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(newWallet));
     }
@@ -169,22 +171,19 @@ contract IdentityRegistryUpgradeable is
     /**
      * @dev Override _update to clear agentWallet on transfer.
      * This ensures the verified wallet doesn't persist to new owners.
+     * Clear BEFORE super._update() to follow Checks-Effects-Interactions pattern.
      */
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         address from = _ownerOf(tokenId);
 
-        // Call parent implementation
-        address result = super._update(to, tokenId, auth);
-
-        // If this is a transfer (not mint), clear agentWallet
+        // If this is a transfer (not mint), clear agentWallet BEFORE external call
         if (from != address(0) && to != address(0)) {
             IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-            $._agentWallet[tokenId] = address(0);
             $._metadata[tokenId]["agentWallet"] = "";
             emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
         }
 
-        return result;
+        return super._update(to, tokenId, auth);
     }
 
     function getVersion() external pure returns (string memory) {
