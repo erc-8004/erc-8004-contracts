@@ -108,12 +108,11 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
-        // Verify agent exists
-        require(_agentExists(agentId), "Agent does not exist");
-
         // Get agent owner
         IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
-        address agentOwner = registry.ownerOf(agentId);
+        address agentOwner;
+        try registry.ownerOf(agentId) returns (address owner) {agentOwner = owner;} catch {}
+        require(agentOwner != address(0), "Agent does not exist");
 
         // SECURITY: Prevent self-feedback from owner and operators
         require(
