@@ -5,8 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URISto
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 contract IdentityRegistryUpgradeable is
     ERC721URIStorageUpgradeable,
@@ -44,7 +43,6 @@ contract IdentityRegistryUpgradeable is
 
     bytes32 private constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
-    bytes4 private constant ERC1271_MAGICVALUE = 0x1626ba7e;
     uint256 private constant MAX_DEADLINE_DELAY = 5 minutes;
     bytes32 private constant RESERVED_AGENT_WALLET_KEY_HASH = keccak256("agentWallet");
 
@@ -154,14 +152,7 @@ contract IdentityRegistryUpgradeable is
         bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);
 
-        // EIP-7702 compatible: try ECDSA first, fallback to ERC1271 if wallet has code
-        address recovered = ECDSA.recover(digest, signature);
-        if (recovered != newWallet) {
-            // ECDSA failed, try ERC1271 if contract
-            require(newWallet.code.length > 0, "invalid wallet sig");
-            bytes4 result = IERC1271(newWallet).isValidSignature(digest, signature);
-            require(result == ERC1271_MAGICVALUE, "invalid wallet sig");
-        }
+        require(SignatureChecker.isValidSignatureNow(newWallet, digest, signature), "invalid wallet sig");
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);

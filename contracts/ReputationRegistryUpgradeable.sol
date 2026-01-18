@@ -123,10 +123,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             "Self-feedback not allowed"
         );
 
-        // Get current index for this client-agent pair (1-indexed)
-        uint64 currentIndex = $._lastIndex[agentId][msg.sender] + 1;
+        // Increment and get current index (1-indexed)
+        uint64 currentIndex = ++$._lastIndex[agentId][msg.sender];
 
-        // Store feedback at 1-indexed position
+        // Store feedback
         $._feedback[agentId][msg.sender][currentIndex] = Feedback({
             value: value,
             valueDecimals: valueDecimals,
@@ -134,9 +134,6 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             tag2: tag2,
             isRevoked: false
         });
-
-        // Update last index
-        $._lastIndex[agentId][msg.sender] = currentIndex;
 
         // track new client
         if (!$._clientExists[agentId][msg.sender]) {
