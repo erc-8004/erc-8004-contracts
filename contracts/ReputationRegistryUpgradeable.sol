@@ -147,8 +147,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
-        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         require(feedbackIndex > 0, "index must be > 0");
+        ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         require(feedbackIndex <= $._lastIndex[agentId][msg.sender], "index out of bounds");
         require(!$._feedback[agentId][msg.sender][feedbackIndex].isRevoked, "Already revoked");
 
