@@ -100,9 +100,10 @@ contract IdentityRegistryUpgradeable is
     }
 
     function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
+        address agentOwner = _ownerOf(agentId);
         require(
-            msg.sender == _ownerOf(agentId) ||
-            isApprovedForAll(_ownerOf(agentId), msg.sender) ||
+            msg.sender == agentOwner ||
+            isApprovedForAll(agentOwner, msg.sender) ||
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
