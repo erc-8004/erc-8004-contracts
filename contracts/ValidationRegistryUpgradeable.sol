@@ -154,7 +154,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
-        for (uint256 i = 0; i < requestHashes.length; i++) {
+        for (uint256 i; i < requestHashes.length; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified

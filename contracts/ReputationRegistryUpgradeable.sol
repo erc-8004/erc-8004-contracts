@@ -220,7 +220,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Track frequency of each valueDecimals (0-18, anything >18 treated as 18)
         uint64[19] memory decimalCounts;
 
-        for (uint256 i = 0; i < clientList.length; i++) {
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -253,7 +253,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Find mode (most frequent valueDecimals)
         uint8 modeDecimals = 0;
         uint64 maxCount = 0;
-        for (uint8 d = 0; d <= 18; d++) {
+        for (uint8 d; d <= 18; d++) {
             if (decimalCounts[d] > maxCount) {
                 maxCount = decimalCounts[d];
                 modeDecimals = d;
@@ -294,7 +294,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
         uint256 totalCount = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -318,7 +318,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         // Second pass: populate arrays
         uint256 idx = 0;
-        for (uint256 i = 0; i < clientList.length; i++) {
+        for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
@@ -350,7 +350,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (clientAddress == address(0)) {
             // Count all responses for all clients
             address[] memory clients = $._clients[agentId];
-            for (uint256 i = 0; i < clients.length; i++) {
+            for (uint256 i; i < clients.length; i++) {
                 uint64 lastIdx = $._lastIndex[agentId][clients[i]];
                 for (uint64 j = 1; j <= lastIdx; j++) {
                     count += _countResponses(agentId, clients[i], j, responders);
@@ -378,12 +378,12 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (responders.length == 0) {
             // Count from all responders
             address[] memory allResponders = $._responders[agentId][clientAddress][feedbackIndex];
-            for (uint256 k = 0; k < allResponders.length; k++) {
+            for (uint256 k; k < allResponders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][allResponders[k]];
             }
         } else {
             // Count from specified responders
-            for (uint256 k = 0; k < responders.length; k++) {
+            for (uint256 k; k < responders.length; k++) {
                 count += $._responseCount[agentId][clientAddress][feedbackIndex][responders[k]];
             }
         }
