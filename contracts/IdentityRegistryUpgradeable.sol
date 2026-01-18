@@ -154,10 +154,11 @@ contract IdentityRegistryUpgradeable is
         bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);
 
-        if (newWallet.code.length == 0) {
-            address recovered = ECDSA.recover(digest, signature);
-            require(recovered == newWallet, "invalid wallet sig");
-        } else {
+        // EIP-7702 compatible: try ECDSA first, fallback to ERC1271 if wallet has code
+        address recovered = ECDSA.recover(digest, signature);
+        if (recovered != newWallet) {
+            // ECDSA failed, try ERC1271 if contract
+            require(newWallet.code.length > 0, "invalid wallet sig");
             bytes4 result = IERC1271(newWallet).isValidSignature(digest, signature);
             require(result == ERC1271_MAGICVALUE, "invalid wallet sig");
         }
