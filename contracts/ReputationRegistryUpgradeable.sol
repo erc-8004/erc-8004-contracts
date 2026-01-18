@@ -209,7 +209,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         if (clientAddresses.length > 0) {
             clientList = clientAddresses;
         } else {
-            clientList = $._clients[agentId];
+            revert("clientAddresses required");
         }
 
         bytes32 emptyHash = keccak256(bytes(""));
