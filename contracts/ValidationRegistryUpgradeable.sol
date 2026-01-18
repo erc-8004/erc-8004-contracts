@@ -154,7 +154,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
-        for (uint256 i = 0; i < requestHashes.length; i++) {
+        for (uint256 i; i < requestHashes.length; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
             // Filter by validator if specified
@@ -169,7 +169,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             }
 
             // Filter by tag (empty string means no filter)
-            bool matchTag = (keccak256(bytes(tag)) == keccak256(bytes(""))) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
+            bool matchTag = (bytes(tag).length == 0) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
 
             if (matchValidator && matchTag && s.hasResponse) {
                 totalResponse += s.response;

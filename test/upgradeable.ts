@@ -33,21 +33,52 @@ describe("ERC8004 Upgradeable Registries", async function () {
     return ("0xc4d66de8" + params.slice(2)) as `0x${string}`;
   }
 
+  // Helper to deploy IdentityRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
+  async function deployIdentityRegistryProxy() {
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress("0x0000000000000000000000000000000000000000");
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    const realImpl = await viem.deployContract("IdentityRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, encodeInitialize()]);
+
+    return await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+  }
+
+  // Helper to deploy ReputationRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
+  async function deployReputationRegistryProxy(identityRegistryAddress: `0x${string}`) {
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    const realImpl = await viem.deployContract("ReputationRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    const reinitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, reinitCalldata]);
+
+    return await viem.getContractAt("ReputationRegistryUpgradeable", proxy.address);
+  }
+
+  // Helper to deploy ValidationRegistry proxy via HardhatMinimalUUPS -> upgrade pattern
+  async function deployValidationRegistryProxy(identityRegistryAddress: `0x${string}`) {
+    const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
+    const minimalInitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+    const realImpl = await viem.deployContract("ValidationRegistryUpgradeable");
+    const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+    const reinitCalldata = encodeInitializeWithAddress(identityRegistryAddress);
+    await minimalProxy.write.upgradeToAndCall([realImpl.address, reinitCalldata]);
+
+    return await viem.getContractAt("ValidationRegistryUpgradeable", proxy.address);
+  }
+
   describe("IdentityRegistryUpgradeable", async function () {
     it("Should deploy through proxy and initialize", async function () {
       const [owner] = await viem.getWalletClients();
 
-      // Deploy implementation
-      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
-
-      // Deploy proxy with initialize()
-      const proxy = await deployProxy(impl.address, encodeInitialize());
-
-      // Get contract instance through proxy
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        proxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       // Verify initialization
       const version = await identityRegistry.read.getVersion();
@@ -59,13 +90,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
     });
 
     it("Should prevent double initialization", async function () {
-      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const proxy = await deployProxy(impl.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        proxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       // Try to initialize again
       await assert.rejects(
@@ -76,13 +101,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
     it("Should maintain functionality through proxy", async function () {
       const [owner] = await viem.getWalletClients();
 
-      const impl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const proxy = await deployProxy(impl.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        proxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       // Test register function
       const tokenURI = "ipfs://QmTest123";
@@ -101,16 +120,9 @@ describe("ERC8004 Upgradeable Registries", async function () {
     it("Should upgrade to new implementation", async function () {
       const [owner] = await viem.getWalletClients();
 
-      // Deploy V1
-      const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-      const proxy = await deployProxy(implV1.address, encodeInitialize());
+      const identityRegistry = await deployIdentityRegistryProxy();
 
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        proxy.address
-      );
-
-      // Register an agent with V1
+      // Register an agent
       const tokenURI = "ipfs://v1-agent";
       const txHash = await identityRegistry.write.register([tokenURI]);
       const agentId = await getAgentIdFromRegistration(txHash);
@@ -137,13 +149,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
     it("Should only allow owner to upgrade", async function () {
       const [owner, attacker] = await viem.getWalletClients();
 
-      const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-      const proxy = await deployProxy(implV1.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        proxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       const implV2 = await viem.deployContract("IdentityRegistryUpgradeable");
 
@@ -161,53 +167,29 @@ describe("ERC8004 Upgradeable Registries", async function () {
     it("Should deploy through proxy with identityRegistry", async function () {
       const [owner] = await viem.getWalletClients();
 
-      // Deploy identity registry
-      const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-
-      // Deploy reputation registry
-      const reputationImpl = await viem.deployContract("ReputationRegistryUpgradeable");
-      const reputationProxy = await deployProxy(reputationImpl.address, encodeInitializeWithAddress(identityProxy.address));
-
-      const reputationRegistry = await viem.getContractAt(
-        "ReputationRegistryUpgradeable",
-        reputationProxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const reputationRegistry = await deployReputationRegistryProxy(identityRegistry.address);
 
       // Verify initialization
       const version = await reputationRegistry.read.getVersion();
       assert.equal(version, "1.1.0");
 
       const storedIdentityRegistry = await reputationRegistry.read.getIdentityRegistry();
-      assert.equal(storedIdentityRegistry.toLowerCase(), identityProxy.address.toLowerCase());
+      assert.equal(storedIdentityRegistry.toLowerCase(), identityRegistry.address.toLowerCase());
     });
 
     it("Should upgrade and maintain storage", async function () {
       const [owner, client] = await viem.getWalletClients();
 
-      // Deploy identity registry
-      const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        identityProxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       // Register an agent
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      // Deploy reputation registry V1
-      const reputationImplV1 = await viem.deployContract("ReputationRegistryUpgradeable");
-      const reputationProxy = await deployProxy(reputationImplV1.address, encodeInitializeWithAddress(identityProxy.address));
+      const reputationRegistry = await deployReputationRegistryProxy(identityRegistry.address);
 
-      const reputationRegistry = await viem.getContractAt(
-        "ReputationRegistryUpgradeable",
-        reputationProxy.address
-      );
-
-      // Give feedback with V1
+      // Give feedback
       await reputationRegistry.write.giveFeedback(
         [agentId, 95, "quality", "service", "https://agent.endpoint.com", "ipfs://feedback", keccak256(toHex("content"))],
         { account: client.account }
@@ -225,51 +207,27 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
   describe("ValidationRegistryUpgradeable", async function () {
     it("Should deploy through proxy with identityRegistry", async function () {
-      // Deploy identity registry
-      const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-
-      // Deploy validation registry
-      const validationImpl = await viem.deployContract("ValidationRegistryUpgradeable");
-      const validationProxy = await deployProxy(validationImpl.address, encodeInitializeWithAddress(identityProxy.address));
-
-      const validationRegistry = await viem.getContractAt(
-        "ValidationRegistryUpgradeable",
-        validationProxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
 
       // Verify initialization
       const version = await validationRegistry.read.getVersion();
       assert.equal(version, "1.1.0");
 
       const storedIdentityRegistry = await validationRegistry.read.getIdentityRegistry();
-      assert.equal(storedIdentityRegistry.toLowerCase(), identityProxy.address.toLowerCase());
+      assert.equal(storedIdentityRegistry.toLowerCase(), identityRegistry.address.toLowerCase());
     });
 
     it("Should upgrade and maintain validation data", async function () {
       const [owner, validator] = await viem.getWalletClients();
 
-      // Deploy identity registry
-      const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        identityProxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
 
       // Register an agent
       const txHash = await identityRegistry.write.register(["ipfs://agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      // Deploy validation registry V1
-      const validationImplV1 = await viem.deployContract("ValidationRegistryUpgradeable");
-      const validationProxy = await deployProxy(validationImplV1.address, encodeInitializeWithAddress(identityProxy.address));
-
-      const validationRegistry = await viem.getContractAt(
-        "ValidationRegistryUpgradeable",
-        validationProxy.address
-      );
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
 
       // Create validation request
       const requestHash = keccak256(toHex("request data"));
@@ -303,38 +261,13 @@ describe("ERC8004 Upgradeable Registries", async function () {
       const [owner, client, validator] = await viem.getWalletClients();
 
       // Deploy all three registries
-      const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-      const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-
-      const identityRegistry = await viem.getContractAt(
-        "IdentityRegistryUpgradeable",
-        identityProxy.address
-      );
-
-      const reputationImpl = await viem.deployContract("ReputationRegistryUpgradeable");
-      const reputationProxy = await deployProxy(reputationImpl.address, encodeInitializeWithAddress(identityProxy.address));
-
-      const reputationRegistry = await viem.getContractAt(
-        "ReputationRegistryUpgradeable",
-        reputationProxy.address
-      );
-
-      const validationImpl = await viem.deployContract("ValidationRegistryUpgradeable");
-      const validationProxy = await deployProxy(validationImpl.address, encodeInitializeWithAddress(identityProxy.address));
-
-      const validationRegistry = await viem.getContractAt(
-        "ValidationRegistryUpgradeable",
-        validationProxy.address
-      );
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const reputationRegistry = await deployReputationRegistryProxy(identityRegistry.address);
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
 
       // Use the registries
       const txHash = await identityRegistry.write.register(["ipfs://test-agent"]);
       const agentId = await getAgentIdFromRegistration(txHash);
-
-      // Verify all proxy addresses remain constant
-      assert.equal(identityRegistry.address, identityProxy.address);
-      assert.equal(reputationRegistry.address, reputationProxy.address);
-      assert.equal(validationRegistry.address, validationProxy.address);
 
       // Upgrade all three registries
       const identityImplV2 = await viem.deployContract("IdentityRegistryUpgradeable");
@@ -374,14 +307,18 @@ describe("ERC8004 Upgradeable Registries", async function () {
       });
 
       it("Should prevent initialization with zero address for registries", async function () {
-        const reputationImpl = await viem.deployContract("ReputationRegistryUpgradeable");
-
-        // Try to deploy proxy with zero address for identityRegistry
+        // Deploy HardhatMinimalUUPS first, then try to upgrade to ReputationRegistry with zero address
+        const minimalImpl = await viem.deployContract("HardhatMinimalUUPS");
         const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
-        const initCalldata = encodeInitializeWithAddress(zeroAddress);
+        const minimalInitCalldata = encodeInitializeWithAddress(zeroAddress);
+        const proxy = await deployProxy(minimalImpl.address, minimalInitCalldata);
+
+        const reputationImpl = await viem.deployContract("ReputationRegistryUpgradeable");
+        const minimalProxy = await viem.getContractAt("HardhatMinimalUUPS", proxy.address);
+        const reinitCalldata = encodeInitializeWithAddress(zeroAddress);
 
         await assert.rejects(
-          deployProxy(reputationImpl.address, initCalldata),
+          minimalProxy.write.upgradeToAndCall([reputationImpl.address, reinitCalldata]),
           /bad identity/,
           "Should reject zero address for identityRegistry"
         );
@@ -390,9 +327,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
     describe("Upgrade Authorization", async function () {
       it("Should reject upgrade to zero address", async function () {
-        const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-        const proxy = await deployProxy(implV1.address, encodeInitialize());
-        const registry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+        const registry = await deployIdentityRegistryProxy();
 
         const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
@@ -405,9 +340,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
       it("Should reject upgrade to non-contract address", async function () {
         const [_, randomUser] = await viem.getWalletClients();
 
-        const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-        const proxy = await deployProxy(implV1.address, encodeInitialize());
-        const registry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+        const registry = await deployIdentityRegistryProxy();
 
         // Try to upgrade to an EOA (Externally Owned Account)
         await assert.rejects(
@@ -419,9 +352,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
       it("Should handle ownership transfer and upgrade permissions correctly", async function () {
         const [owner, newOwner, attacker] = await viem.getWalletClients();
 
-        const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-        const proxy = await deployProxy(implV1.address, encodeInitialize());
-        const registry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+        const registry = await deployIdentityRegistryProxy();
 
         // Register some data
         const txHash = await registry.write.register(["ipfs://agent"]);
@@ -467,9 +398,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
       it("Should maintain complex storage across upgrades", async function () {
         const [owner] = await viem.getWalletClients();
 
-        const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-        const proxy = await deployProxy(implV1.address, encodeInitialize());
-        const registry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+        const registry = await deployIdentityRegistryProxy();
 
         // Create multiple agents with different data
         const agents = [];
@@ -519,13 +448,8 @@ describe("ERC8004 Upgradeable Registries", async function () {
         const [owner, client1, client2] = await viem.getWalletClients();
 
         // Deploy both registries
-        const identityImpl = await viem.deployContract("IdentityRegistryUpgradeable");
-        const identityProxy = await deployProxy(identityImpl.address, encodeInitialize());
-        const identityRegistry = await viem.getContractAt("IdentityRegistryUpgradeable", identityProxy.address);
-
-        const reputationImpl = await viem.deployContract("ReputationRegistryUpgradeable");
-        const reputationProxy = await deployProxy(reputationImpl.address, encodeInitializeWithAddress(identityProxy.address));
-        const reputationRegistry = await viem.getContractAt("ReputationRegistryUpgradeable", reputationProxy.address);
+        const identityRegistry = await deployIdentityRegistryProxy();
+        const reputationRegistry = await deployReputationRegistryProxy(identityRegistry.address);
 
         // Register agents
         const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
@@ -570,9 +494,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
     describe("Upgrade Event Emission", async function () {
       it("Should emit Upgraded event with correct implementation address", async function () {
-        const implV1 = await viem.deployContract("IdentityRegistryUpgradeable");
-        const proxy = await deployProxy(implV1.address, encodeInitialize());
-        const registry = await viem.getContractAt("IdentityRegistryUpgradeable", proxy.address);
+        const registry = await deployIdentityRegistryProxy();
 
         const implV2 = await viem.deployContract("IdentityRegistryUpgradeable");
         const txHash = await registry.write.upgradeToAndCall([implV2.address, "0x"]);

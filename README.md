@@ -32,6 +32,7 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: to be deployed
 - **ReputationRegistry**: to be deployed
 
+
 ## About
 
 This project implements **ERC-8004**, a protocol that enables discovering, choosing, and interacting with agents across organizational boundaries without pre-existing trust. It provides three core registries:
