@@ -17,7 +17,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         uint256 indexed agentId,
         address indexed clientAddress,
         uint64 feedbackIndex,
-        uint8 score,
+        uint256 value,
+        uint8 valueDecimals,
         string indexed indexedTag1,
         string tag1,
         string tag2,
@@ -42,7 +43,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     );
 
     struct Feedback {
-        uint8 score;
+        uint256 value;
+        uint8 valueDecimals;
         string tag1;
         string tag2;
         bool isRevoked;
@@ -93,14 +95,15 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     function giveFeedback(
         uint256 agentId,
-        uint8 score,
+        uint256 value,
+        uint8 valueDecimals,
         string calldata tag1,
         string calldata tag2,
         string calldata endpoint,
         string calldata feedbackURI,
         bytes32 feedbackHash
     ) external {
-        require(score <= 100, "score>100");
+        require(value <= 100, "value>100");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
@@ -124,7 +127,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
         // Store feedback at 1-indexed position
         $._feedback[agentId][msg.sender][currentIndex] = Feedback({
-            score: score,
+            value: value,
+            valueDecimals: valueDecimals,
             tag1: tag1,
             tag2: tag2,
             isRevoked: false
@@ -139,7 +143,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             $._clientExists[agentId][msg.sender] = true;
         }
 
-        emit NewFeedback(agentId, msg.sender, currentIndex, score, tag1, tag1, tag2, endpoint, feedbackURI, feedbackHash);
+        emit NewFeedback(agentId, msg.sender, currentIndex, value, valueDecimals, tag1, tag1, tag2, endpoint, feedbackURI, feedbackHash);
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
@@ -184,13 +188,13 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
         external
         view
-        returns (uint8 score, string memory tag1, string memory tag2, bool isRevoked)
+        returns (uint256 value, uint8 valueDecimals, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         require(feedbackIndex > 0, "index must be > 0");
         require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
         Feedback storage f = $._feedback[agentId][clientAddress][feedbackIndex];
-        return (f.score, f.tag1, f.tag2, f.isRevoked);
+        return (f.value, f.valueDecimals, f.tag1, f.tag2, f.isRevoked);
     }
 
     function getSummary(
@@ -198,7 +202,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         address[] calldata clientAddresses,
         string calldata tag1,
         string calldata tag2
-    ) external view returns (uint64 count, uint8 averageScore) {
+    ) external view returns (uint64 count, uint256 summaryValue, uint8 summaryValueDecimals) {
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         address[] memory clientList;
@@ -208,12 +212,17 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             clientList = $._clients[agentId];
         }
 
-        uint256 totalScore = 0;
-        count = 0;
-
         bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
+
+        // WAD: 18 decimal fixed-point precision for internal math
+        uint256 sum = 0;
+        count = 0;
+
+        // Track frequency of each valueDecimals (0-18, anything >18 treated as 18)
+        uint64[19] memory decimalCounts;
+
         for (uint256 i = 0; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
@@ -223,12 +232,41 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
                     tag1Hash != keccak256(bytes(fb.tag1))) continue;
                 if (emptyHash != tag2Hash &&
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
-                totalScore += fb.score;
+
+                // Normalize to 18 decimals (WAD)
+                uint256 normalized;
+                if (fb.valueDecimals <= 18) {
+                    normalized = fb.value * (10 ** (18 - fb.valueDecimals));
+                    decimalCounts[fb.valueDecimals]++;
+                } else {
+                    // Precision beyond 18 decimals is discarded
+                    normalized = fb.value / (10 ** (fb.valueDecimals - 18));
+                    decimalCounts[18]++;
+                }
+
+                sum += normalized;
                 count++;
             }
         }
 
-        averageScore = count > 0 ? uint8(totalScore / count) : 0;
+        if (count == 0) {
+            return (0, 0, 0);
+        }
+
+        // Find mode (most frequent valueDecimals)
+        uint8 modeDecimals = 0;
+        uint64 maxCount = 0;
+        for (uint8 d = 0; d <= 18; d++) {
+            if (decimalCounts[d] > maxCount) {
+                maxCount = decimalCounts[d];
+                modeDecimals = d;
+            }
+        }
+
+        // Calculate average in WAD, then scale to mode precision
+        uint256 avgWad = sum / count;
+        summaryValue = avgWad / (10 ** (18 - modeDecimals));
+        summaryValueDecimals = modeDecimals;
     }
 
     function readAllFeedback(
@@ -240,7 +278,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     ) external view returns (
         address[] memory clients,
         uint64[] memory feedbackIndexes,
-        uint8[] memory scores,
+        uint256[] memory values,
+        uint8[] memory valueDecimals,
         string[] memory tag1s,
         string[] memory tag2s,
         bool[] memory revokedStatuses
@@ -274,7 +313,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Initialize arrays
         clients = new address[](totalCount);
         feedbackIndexes = new uint64[](totalCount);
-        scores = new uint8[](totalCount);
+        values = new uint256[](totalCount);
+        valueDecimals = new uint8[](totalCount);
         tag1s = new string[](totalCount);
         tag2s = new string[](totalCount);
         revokedStatuses = new bool[](totalCount);
@@ -293,7 +333,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
                 clients[idx] = clientList[i];
                 feedbackIndexes[idx] = j;
-                scores[idx] = fb.score;
+                values[idx] = fb.value;
+                valueDecimals[idx] = fb.valueDecimals;
                 tag1s[idx] = fb.tag1;
                 tag2s[idx] = fb.tag2;
                 revokedStatuses[idx] = fb.isRevoked;
