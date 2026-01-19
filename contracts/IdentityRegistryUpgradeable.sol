@@ -121,13 +121,9 @@ contract IdentityRegistryUpgradeable is
         emit URIUpdated(agentId, newURI, msg.sender);
     }
 
-    function getAgentWallet(uint256 agentId) external view returns (address) {
-        // Ensure token exists (consistent with other identity reads)
-        ownerOf(agentId);
+    function getAgentWallet(uint256 agentId) external view returns (bytes memory) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        bytes memory data = $._metadata[agentId]["agentWallet"];
-        if (data.length == 0) return address(0);
-        return address(bytes20(data));
+        return $._metadata[agentId]["agentWallet"];
     }
 
     function setAgentWallet(
