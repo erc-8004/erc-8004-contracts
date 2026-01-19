@@ -557,9 +557,9 @@
     "name": "getAgentWallet",
     "outputs": [
       {
-        "internalType": "address",
+        "internalType": "bytes",
         "name": "",
-        "type": "address"
+        "type": "bytes"
       }
     ],
     "stateMutability": "view",
@@ -1006,6 +1006,19 @@
       }
     ],
     "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "agentId",
+        "type": "uint256"
+      }
+    ],
+    "name": "unsetAgentWallet",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
