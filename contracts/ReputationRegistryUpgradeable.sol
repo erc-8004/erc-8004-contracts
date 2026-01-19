@@ -71,9 +71,9 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         mapping(uint256 => mapping(address => bool)) _clientExists;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("erc8004.reputation.registry")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("erc8004.reputation.registry.2")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant REPUTATION_REGISTRY_STORAGE_LOCATION =
-        0xefc1f5a295af9308c4507ba9db1182cd263d74c9e619e13ae45fd9b00d5b1900;
+        0xa03d7693f2b3746b2d03f163c788147b71aa82854399a21fdf4de143ba778300;
 
     function _getReputationRegistryStorage() private pure returns (ReputationRegistryStorage storage $) {
         assembly {
