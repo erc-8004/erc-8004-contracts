@@ -201,7 +201,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Verify feedback persists
       const feedback = await reputationRegistry.read.readFeedback([agentId, client.account.address, 1n]);
-      assert.equal(feedback[0], 95); // score
+      assert.equal(feedback[0], 95n); // score
     });
   });
 
@@ -479,16 +479,16 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
         // Verify ALL feedbacks persist with correct nested mapping structure
         const feedback1 = await reputationRegistry.read.readFeedback([agentId1, client1.account.address, 1n]);
-        assert.equal(feedback1[0], 85, "Agent1-Client1 score should persist");
+        assert.equal(feedback1[0], 85n, "Agent1-Client1 score should persist");
 
         const feedback2 = await reputationRegistry.read.readFeedback([agentId1, client2.account.address, 1n]);
-        assert.equal(feedback2[0], 90, "Agent1-Client2 score should persist");
+        assert.equal(feedback2[0], 90n, "Agent1-Client2 score should persist");
 
         const feedback3 = await reputationRegistry.read.readFeedback([agentId2, client1.account.address, 1n]);
-        assert.equal(feedback3[0], 75, "Agent2-Client1 score should persist");
+        assert.equal(feedback3[0], 75n, "Agent2-Client1 score should persist");
 
         const feedback4 = await reputationRegistry.read.readFeedback([agentId2, client2.account.address, 1n]);
-        assert.equal(feedback4[0], 95, "Agent2-Client2 score should persist");
+        assert.equal(feedback4[0], 95n, "Agent2-Client2 score should persist");
       });
     });
 

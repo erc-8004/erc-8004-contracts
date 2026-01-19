@@ -577,13 +577,11 @@ describe("ERC8004 Registries", async function () {
       assert.equal(wallet.toLowerCase(), owner.account.address.toLowerCase());
     });
 
-    it("Should revert getAgentWallet for non-existent token", async function () {
+    it("Should return empty bytes for getAgentWallet on non-existent token", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
 
-      await assert.rejects(
-        identityRegistry.read.getAgentWallet([999n]),
-        /ERC721NonexistentToken/i
-      );
+      const wallet = await identityRegistry.read.getAgentWallet([999n]);
+      assert.equal(wallet, "0x");
     });
 
     it("Should clear agentWallet on transfer", async function () {
@@ -641,7 +639,7 @@ describe("ERC8004 Registries", async function () {
 
       // Verify agentWallet is cleared
       const walletAfter = await identityRegistry.read.getAgentWallet([agentId]);
-      assert.equal(walletAfter, "0x0000000000000000000000000000000000000000");
+      assert.equal(walletAfter, "0x");
 
       // Verify metadata is also cleared
       const metadataWallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
@@ -670,7 +668,7 @@ describe("ERC8004 Registries", async function () {
       const txHash = await identityRegistry.write.register(["ipfs://agent"], { account: agentOwner.account });
       const agentId = await getAgentIdFromRegistration(txHash);
 
-      const score = 85;
+      const score = 85n;
       const tag1 = "quality";
       const tag2 = "speed";
       const endpoint = "https://agent.example.com";
@@ -805,9 +803,9 @@ describe("ERC8004 Registries", async function () {
       const fb1 = await reputationRegistry.read.readFeedback([agentId, client.account.address, 2n]);
       const fb2 = await reputationRegistry.read.readFeedback([agentId, client.account.address, 3n]);
 
-      assert.equal(fb0[0], 80);
-      assert.equal(fb1[0], 81);
-      assert.equal(fb2[0], 82);
+      assert.equal(fb0[0], 80n);
+      assert.equal(fb1[0], 81n);
+      assert.equal(fb2[0], 82n);
     });
 
     /**
@@ -876,7 +874,7 @@ describe("ERC8004 Registries", async function () {
       ], { account: client.account });
 
       const feedback = await reputationRegistry.read.readFeedback([agentId, client.account.address, 1n]);
-      assert.equal(feedback[0], 0);
+      assert.equal(feedback[0], 0n);
     });
 
     /**
@@ -902,7 +900,7 @@ describe("ERC8004 Registries", async function () {
       ], { account: client.account });
 
       const feedback = await reputationRegistry.read.readFeedback([agentId, client.account.address, 1n]);
-      assert.equal(feedback[0], 100);
+      assert.equal(feedback[0], 100n);
     });
 
     it("Should reject feedback without auth (empty bytes)", async function () {
@@ -964,7 +962,7 @@ describe("ERC8004 Registries", async function () {
       ]);
 
       assert.equal(summary[0], 3n); // count = 3
-      assert.equal(summary[1], 90); // average = (80 + 90 + 100) / 3 = 90
+      assert.equal(summary[1], 90n); // average = (80 + 90 + 100) / 3 = 90
     });
 
     it("Should filter summary by tags", async function () {
@@ -987,7 +985,7 @@ describe("ERC8004 Registries", async function () {
       // Filter by tagA and tagB (exact match required)
       const summaryA = await reputationRegistry.read.getSummary([agentId, [client.account.address], tagA, tagB]);
       assert.equal(summaryA[0], 1n); // count = 1 (only first one matches both)
-      assert.equal(summaryA[1], 80); // score of first feedback
+      assert.equal(summaryA[1], 80n); // score of first feedback
     });
 
     it("Should read all feedback with filters", async function () {
@@ -1019,10 +1017,10 @@ describe("ERC8004 Registries", async function () {
         false // don't include revoked
       ]);
 
-      assert.equal(result[2].length, 3); // 3 feedbacks (scores at index 2 now)
-      assert.equal(result[2][0], 80);
-      assert.equal(result[2][1], 90);
-      assert.equal(result[2][2], 100);
+      assert.equal(result[2].length, 3); // 3 feedbacks (values at index 2)
+      assert.equal(result[2][0], 80n);
+      assert.equal(result[2][1], 90n);
+      assert.equal(result[2][2], 100n);
     });
 
     it("Should store responses and count them", async function () {
@@ -1133,7 +1131,7 @@ describe("ERC8004 Registries", async function () {
 
       // Should match all 3 feedbacks
       assert.equal(summary[0], 3n); // count
-      assert.equal(summary[1], 90); // average = (80 + 90 + 100) / 3 = 90
+      assert.equal(summary[1], 90n); // average = (80 + 90 + 100) / 3 = 90
     });
 
     it("Should filter with empty string wildcard for tag2 in getSummary", async function () {
@@ -1165,7 +1163,7 @@ describe("ERC8004 Registries", async function () {
 
       // Should match all 3 feedbacks
       assert.equal(summary[0], 3n); // count
-      assert.equal(summary[1], 80); // average = (70 + 80 + 90) / 3 = 80
+      assert.equal(summary[1], 80n); // average = (70 + 80 + 90) / 3 = 80
     });
 
     it("Should filter with empty string wildcard for both tags in getSummary", async function () {
@@ -1197,7 +1195,7 @@ describe("ERC8004 Registries", async function () {
 
       // Should match all 3 feedbacks
       assert.equal(summary[0], 3n); // count
-      assert.equal(summary[1], 80); // average = (60 + 80 + 100) / 3 = 80
+      assert.equal(summary[1], 80n); // average = (60 + 80 + 100) / 3 = 80
     });
 
     it("Should filter with empty string wildcard in readAllFeedback", async function () {
@@ -1228,13 +1226,13 @@ describe("ERC8004 Registries", async function () {
         false
       ]);
 
-      const [clients, feedbackIndexes, scores, tag1s, tag2s, revokedStatuses] = result;
+      const [clients, feedbackIndexes, values, valueDecimals, tag1s, tag2s, revokedStatuses] = result;
 
       // Should return all 3 feedbacks
       assert.equal(clients.length, 3);
-      assert.equal(scores[0], 70);
-      assert.equal(scores[1], 80);
-      assert.equal(scores[2], 90);
+      assert.equal(values[0], 70n);
+      assert.equal(values[1], 80n);
+      assert.equal(values[2], 90n);
       assert.equal(tag1s[0], "quality");
       assert.equal(tag1s[1], "speed");
       assert.equal(tag1s[2], "reliability");
@@ -1448,19 +1446,21 @@ describe("ERC8004 Registries", async function () {
       const feedback1 = await reputationRegistry.read.readFeedback([
         agentId, client.account.address, 1n
       ]);
-      assert.equal(feedback1[0], 80); // score
-      assert.equal(feedback1[1], "quality"); // tag1
-      assert.equal(feedback1[2], "fast"); // tag2
-      assert.equal(feedback1[3], false); // isRevoked
+      assert.equal(feedback1[0], 80n); // value
+      assert.equal(feedback1[1], 0); // valueDecimals
+      assert.equal(feedback1[2], "quality"); // tag1
+      assert.equal(feedback1[3], "fast"); // tag2
+      assert.equal(feedback1[4], false); // isRevoked
 
       // Read second feedback
       const feedback2 = await reputationRegistry.read.readFeedback([
         agentId, client.account.address, 2n
       ]);
-      assert.equal(feedback2[0], 90);
-      assert.equal(feedback2[1], "speed");
-      assert.equal(feedback2[2], "slow");
-      assert.equal(feedback2[3], false);
+      assert.equal(feedback2[0], 90n); // value
+      assert.equal(feedback2[1], 0); // valueDecimals
+      assert.equal(feedback2[2], "speed"); // tag1
+      assert.equal(feedback2[3], "slow"); // tag2
+      assert.equal(feedback2[4], false); // isRevoked
     });
 
     it("Should reject reading feedback with out of bounds index", async function () {
@@ -1801,7 +1801,7 @@ describe("ERC8004 Registries", async function () {
       const summary = await validationRegistry.read.getSummary([agentId, [], "0x0000000000000000000000000000000000000000000000000000000000000000"]);
       // Due to contract bug, count will be 0 instead of 2
       assert.equal(summary[0], 0n); // count (broken due to tag type mismatch)
-      assert.equal(summary[1], 0); // average (no valid responses matched)
+      assert.equal(summary[1], 0); // average (no valid responses matched) - uint8 returns as number
 
       // Get agent validations
       const validations = await validationRegistry.read.getAgentValidations([agentId]);
