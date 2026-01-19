@@ -193,6 +193,6 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function getVersion() external pure returns (string memory) {
-        return "1.1.0";
+        return "2.0.0";
     }
 }

@@ -188,6 +188,6 @@ contract IdentityRegistryUpgradeable is
     }
 
     function getVersion() external pure returns (string memory) {
-        return "1.1.0";
+        return "2.0.0";
     }
 }

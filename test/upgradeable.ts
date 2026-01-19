@@ -82,7 +82,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Verify initialization
       const version = await identityRegistry.read.getVersion();
-      assert.equal(version, "1.1.0");
+      assert.equal(version, "2.0.0");
 
       // Verify owner
       const contractOwner = await identityRegistry.read.owner();
@@ -172,7 +172,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Verify initialization
       const version = await reputationRegistry.read.getVersion();
-      assert.equal(version, "1.1.0");
+      assert.equal(version, "2.0.0");
 
       const storedIdentityRegistry = await reputationRegistry.read.getIdentityRegistry();
       assert.equal(storedIdentityRegistry.toLowerCase(), identityRegistry.address.toLowerCase());
@@ -191,7 +191,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Give feedback
       await reputationRegistry.write.giveFeedback(
-        [agentId, 95, "quality", "service", "https://agent.endpoint.com", "ipfs://feedback", keccak256(toHex("content"))],
+        [agentId, 95, 0, "quality", "service", "https://agent.endpoint.com", "ipfs://feedback", keccak256(toHex("content"))],
         { account: client.account }
       );
 
@@ -212,7 +212,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
       // Verify initialization
       const version = await validationRegistry.read.getVersion();
-      assert.equal(version, "1.1.0");
+      assert.equal(version, "2.0.0");
 
       const storedIdentityRegistry = await validationRegistry.read.getIdentityRegistry();
       assert.equal(storedIdentityRegistry.toLowerCase(), identityRegistry.address.toLowerCase());
@@ -462,7 +462,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
         // Helper to create feedback
         async function giveFeedback(agentId: bigint, client: any, score: number, category: string) {
           await reputationRegistry.write.giveFeedback(
-            [agentId, score, category, "service", "https://agent.endpoint.com", `ipfs://feedback-${category}`, keccak256(toHex("content"))],
+            [agentId, score, 0, category, "service", "https://agent.endpoint.com", `ipfs://feedback-${category}`, keccak256(toHex("content"))],
             { account: client.account }
           );
         }

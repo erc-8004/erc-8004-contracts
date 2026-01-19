@@ -13,11 +13,13 @@ interface IIdentityRegistry {
 
 contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
+    int256 private constant MAX_ABS_VALUE = 1e50;
+
     event NewFeedback(
         uint256 indexed agentId,
         address indexed clientAddress,
         uint64 feedbackIndex,
-        uint256 value,
+        int256 value,
         uint8 valueDecimals,
         string indexed indexedTag1,
         string tag1,
@@ -43,7 +45,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     );
 
     struct Feedback {
-        uint256 value;
+        int256 value;
         uint8 valueDecimals;
         string tag1;
         string tag2;
@@ -95,7 +97,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     function giveFeedback(
         uint256 agentId,
-        uint256 value,
+        int256 value,
         uint8 valueDecimals,
         string calldata tag1,
         string calldata tag2,
@@ -104,7 +106,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 feedbackHash
     ) external {
         require(valueDecimals <= 18, "too many decimals");
-        require(value <= 1e50, "value too large");
+        require(value >= -MAX_ABS_VALUE && value <= MAX_ABS_VALUE, "value too large");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
@@ -185,7 +187,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex)
         external
         view
-        returns (uint256 value, uint8 valueDecimals, string memory tag1, string memory tag2, bool isRevoked)
+        returns (int256 value, uint8 valueDecimals, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         require(feedbackIndex > 0, "index must be > 0");
@@ -199,7 +201,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         address[] calldata clientAddresses,
         string calldata tag1,
         string calldata tag2
-    ) external view returns (uint64 count, uint256 summaryValue, uint8 summaryValueDecimals) {
+    ) external view returns (uint64 count, int256 summaryValue, uint8 summaryValueDecimals) {
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
         address[] memory clientList;
@@ -214,7 +216,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 tag2Hash = keccak256(bytes(tag2));
 
         // WAD: 18 decimal fixed-point precision for internal math
-        uint256 sum = 0;
+        int256 sum = 0;
         count = 0;
 
         // Track frequency of each valueDecimals (0-18, anything >18 treated as 18)
@@ -231,15 +233,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
                     tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 // Normalize to 18 decimals (WAD)
-                uint256 normalized;
-                if (fb.valueDecimals <= 18) {
-                    normalized = fb.value * (10 ** (18 - fb.valueDecimals));
-                    decimalCounts[fb.valueDecimals]++;
-                } else {
-                    // Precision beyond 18 decimals is discarded
-                    normalized = fb.value / (10 ** (fb.valueDecimals - 18));
-                    decimalCounts[18]++;
-                }
+                // `valueDecimals` is bounded to <= 18 on write; keep math signed.
+                int256 factor = int256(10 ** uint256(18 - fb.valueDecimals));
+                int256 normalized = fb.value * factor;
+                decimalCounts[fb.valueDecimals]++;
 
                 sum += normalized;
                 count++;
@@ -261,8 +258,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // Calculate average in WAD, then scale to mode precision
-        uint256 avgWad = sum / count;
-        summaryValue = avgWad / (10 ** (18 - modeDecimals));
+        int256 avgWad = sum / int256(uint256(count));
+        summaryValue = avgWad / int256(10 ** uint256(18 - modeDecimals));
         summaryValueDecimals = modeDecimals;
     }
 
@@ -275,7 +272,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     ) external view returns (
         address[] memory clients,
         uint64[] memory feedbackIndexes,
-        uint256[] memory values,
+        int256[] memory values,
         uint8[] memory valueDecimals,
         string[] memory tag1s,
         string[] memory tag2s,
@@ -310,7 +307,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Initialize arrays
         clients = new address[](totalCount);
         feedbackIndexes = new uint64[](totalCount);
-        values = new uint256[](totalCount);
+        values = new int256[](totalCount);
         valueDecimals = new uint8[](totalCount);
         tag1s = new string[](totalCount);
         tag2s = new string[](totalCount);
@@ -405,6 +402,6 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function getVersion() external pure returns (string memory) {
-        return "1.1.0";
+        return "2.0.0";
     }
 }
