@@ -104,7 +104,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 feedbackHash
     ) external {
         require(valueDecimals <= 18, "too many decimals");
-        require(value <= 100 * (10 ** valueDecimals), "value>100");
+        require(value <= 1e50, "value too large");
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 

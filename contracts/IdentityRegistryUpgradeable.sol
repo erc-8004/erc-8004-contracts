@@ -23,8 +23,6 @@ contract IdentityRegistryUpgradeable is
         uint256 _lastId;
         // agentId => metadataKey => metadataValue (includes "agentWallet")
         mapping(uint256 => mapping(string => bytes)) _metadata;
-        // DEPRECATED: kept for storage layout compatibility, use metadata["agentWallet"] instead
-        mapping(uint256 => address) _deprecatedAgentWallet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -157,6 +155,20 @@ contract IdentityRegistryUpgradeable is
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);
         emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(newWallet));
+    }
+
+    function unsetAgentWallet(uint256 agentId) external {
+        address owner = ownerOf(agentId);
+        require(
+            msg.sender == owner ||
+            isApprovedForAll(owner, msg.sender) ||
+            msg.sender == getApproved(agentId),
+            "Not authorized"
+        );
+
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        $._metadata[agentId]["agentWallet"] = "";
+        emit MetadataSet(agentId, "agentWallet", "agentWallet", "");
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
