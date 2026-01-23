@@ -197,6 +197,15 @@ contract IdentityRegistryUpgradeable is
         return super._update(to, tokenId, auth);
     }
 
+    /**
+     * @notice Checks if spender is owner or approved for the agent
+     * @dev Reverts with ERC721NonexistentToken if agent doesn't exist
+     */
+    function isAuthorizedOrOwner(address spender, uint256 agentId) external view returns (bool) {
+        address owner = ownerOf(agentId);
+        return _isAuthorized(owner, spender, agentId);
+    }
+
     function getVersion() external pure returns (string memory) {
         return "2.0.0";
     }
