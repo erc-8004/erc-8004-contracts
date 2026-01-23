@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
-import { getAddress, keccak256, toHex, Hex } from "viem";
+import { getAddress, keccak256, toHex, Hex, zeroAddress } from "viem";
 
 /**
  * Deployed vanity addresses (deterministic CREATE2 addresses)
@@ -365,11 +365,11 @@ describe("ERC8004 Registries", async function () {
         { account: owner.account }
       );
 
-      // Verify agentWallet is cleared
+      // Verify agentWallet is cleared (returns zero address)
       const walletAfter = await identityRegistry.read.getAgentWallet([agentId]);
-      assert.equal(walletAfter, "0x");
+      assert.equal(walletAfter, zeroAddress);
 
-      // Verify metadata is also cleared
+      // Verify metadata is also cleared (raw bytes)
       const metadataWallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
       assert.equal(metadataWallet, "0x");
     });

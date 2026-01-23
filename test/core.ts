@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
-import { encodeAbiParameters, getAddress, keccak256, toHex } from "viem";
+import { encodeAbiParameters, getAddress, keccak256, toHex, zeroAddress } from "viem";
 
 describe("ERC8004 Registries", async function () {
   const { viem } = await network.connect();
@@ -577,11 +577,11 @@ describe("ERC8004 Registries", async function () {
       assert.equal(wallet.toLowerCase(), owner.account.address.toLowerCase());
     });
 
-    it("Should return empty bytes for getAgentWallet on non-existent token", async function () {
+    it("Should return zero address for getAgentWallet on non-existent token", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
 
       const wallet = await identityRegistry.read.getAgentWallet([999n]);
-      assert.equal(wallet, "0x");
+      assert.equal(wallet, zeroAddress);
     });
 
     it("Should clear agentWallet on transfer", async function () {
@@ -637,11 +637,11 @@ describe("ERC8004 Registries", async function () {
         { account: owner.account }
       );
 
-      // Verify agentWallet is cleared
+      // Verify agentWallet is cleared (returns zero address)
       const walletAfter = await identityRegistry.read.getAgentWallet([agentId]);
-      assert.equal(walletAfter, "0x");
+      assert.equal(walletAfter, zeroAddress);
 
-      // Verify metadata is also cleared
+      // Verify metadata is also cleared (raw bytes)
       const metadataWallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
       assert.equal(metadataWallet, "0x");
     });

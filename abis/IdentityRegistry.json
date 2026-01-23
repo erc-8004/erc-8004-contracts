@@ -557,9 +557,9 @@
     "name": "getAgentWallet",
     "outputs": [
       {
-        "internalType": "bytes",
+        "internalType": "address",
         "name": "",
-        "type": "bytes"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
