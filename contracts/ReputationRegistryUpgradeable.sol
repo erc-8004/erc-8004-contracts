@@ -203,8 +203,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 tag2Hash = keccak256(bytes(tag2));
 
         // WAD: 18 decimal fixed-point precision for internal math
-        int256 sum = 0;
-        count = 0;
+        int256 sum;
 
         // Track frequency of each valueDecimals (0-18, anything >18 treated as 18)
         uint64[19] memory decimalCounts;
@@ -235,8 +234,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         }
 
         // Find mode (most frequent valueDecimals)
-        uint8 modeDecimals = 0;
-        uint64 maxCount = 0;
+        uint8 modeDecimals;
+        uint64 maxCount;
         for (uint8 d; d <= 18; d++) {
             if (decimalCounts[d] > maxCount) {
                 maxCount = decimalCounts[d];
@@ -277,7 +276,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
         bytes32 tag2Hash = keccak256(bytes(tag2));
-        uint256 totalCount = 0;
+        uint256 totalCount;
         for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
@@ -301,7 +300,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         revokedStatuses = new bool[](totalCount);
 
         // Second pass: populate arrays
-        uint256 idx = 0;
+        uint256 idx;
         for (uint256 i; i < clientList.length; i++) {
             uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
