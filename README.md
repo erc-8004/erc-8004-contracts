@@ -211,9 +211,16 @@ ERC8004SPEC.md                           - Protocol spec used as source-of-truth
 ## Resources
 
 - [ERC-8004 Full Specification](./ERC8004SPEC.md)
+- [ERC-8004 Website](https://www.8004.org)
 - [Hardhat Documentation](https://hardhat.org/docs)
 - [EIP-721: Non-Fungible Token Standard](https://eips.ethereum.org/EIPS/eip-721)
 
 ## License
 
 CC0 - Public Domain
+
+## Contacts
+
+ERC-8004 is a community effort coordinated by Marco De Rossi (MetaMask) and Davide Crapis (EF), with the co-authorship of Jordan Ellis (Google) and Erik Reppel (Coinbase). Our core team is joined by Leonard Tan (MetaMask), Vitto Rivabella (EF), and Isha Sangani (EF).
+
+Check out our website at [8004.org](https://www.8004.org) and reach out at `team@8004.org`.
