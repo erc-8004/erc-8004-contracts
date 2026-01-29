@@ -82,8 +82,7 @@ scripts/
 ├── generate-triple-presigned-upgrade.ts    # Generate pre-signed upgrade transactions
 ├── upgrade-vanity-presigned.ts             # Broadcast pre-signed upgrades
 ├── verify-vanity.ts                        # Verify deployment
-├── find-vanity-salts-parallel.ts           # Find salts for vanity addresses
-└── upgrade-contracts.ts                    # Generic upgrade script
+└── find-vanity-salts-parallel.ts           # Find salts for vanity addresses
 
 test/
 ├── core.ts                                 # Core contract tests (49 tests)
