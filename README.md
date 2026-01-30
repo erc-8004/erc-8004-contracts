@@ -8,10 +8,17 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://etherscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://etherscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
-
 #### Ethereum Sepolia
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### BSC Mainnet
+- **IdentityRegistry**: [`0x8004A41392bdd4A4F12339447ab4B8719D562e51`](https://bscscan.com/address/0x8004A41392bdd4A4F12339447ab4B8719D562e51)
+- **ReputationRegistry**: [`0x8004B73fb8Acb5633ce2810d5bd38A1911226D9f`](https://bscscan.com/address/0x8004B73fb8Acb5633ce2810d5bd38A1911226D9f)
+
+#### BSC Testnet
+- **IdentityRegistry**: [`0x8004A41392bdd4A4F12339447ab4B8719D562e51`](https://testnet.bscscan.com/address/0x8004A41392bdd4A4F12339447ab4B8719D562e51)
+- **ReputationRegistry**: [`0x8004B73fb8Acb5633ce2810d5bd38A1911226D9f`](https://testnet.bscscan.com/address/0x8004B73fb8Acb5633ce2810d5bd38A1911226D9f)
 
 #### Base Sepolia
 - **IdentityRegistry**: to be deployed
