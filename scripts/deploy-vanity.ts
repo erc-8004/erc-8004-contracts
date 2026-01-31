@@ -1,46 +1,18 @@
 import hre from "hardhat";
 import { encodeAbiParameters, encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
 import dotenv from "dotenv";
+import {
+  SAFE_SINGLETON_FACTORY,
+  IMPLEMENTATION_SALTS,
+  getAddresses,
+  getVanitySalts,
+  getMinimalUUPSContract,
+  getMinimalUUPSSalt,
+  getNetworkType,
+} from "./addresses";
 
 // Load environment variables from .env file
 dotenv.config();
-
-/**
- * SAFE Singleton CREATE2 Factory address
- */
-const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
-
-/**
- * Salt for MinimalUUPS deployment (single instance for all registries)
- */
-const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
-
-/**
- * Vanity salts for proxies (pointing to MinimalUUPS initially)
- */
-const VANITY_SALTS = {
-  identityRegistry: "0x000000000000000000000000000000000000000000000000000000000053bcdc" as Hex,
-  reputationRegistry: "0x00000000000000000000000000000000000000000000000000000000003029ea" as Hex,
-  validationRegistry: "0x000000000000000000000000000000000000000000000000000000000027f902" as Hex,
-} as const;
-
-/**
- * Salts for implementation contracts (deployed via CREATE2)
- */
-const IMPLEMENTATION_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
-} as const;
-
-/**
- * Expected vanity proxy addresses
- */
-const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
-  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
-} as const;
 
 /**
  * Gets the full deployment bytecode for ERC1967Proxy
@@ -85,8 +57,19 @@ async function main() {
   const publicClient = await viem.getPublicClient();
   const [deployer] = await viem.getWalletClients();
 
+  // Get chainId and network-specific config
+  const chainId = await publicClient.getChainId();
+  const networkType = getNetworkType(chainId);
+  const EXPECTED_ADDRESSES = getAddresses(chainId);
+  const VANITY_SALTS = getVanitySalts(chainId);
+  const MINIMAL_UUPS_CONTRACT = getMinimalUUPSContract(chainId);
+  const MINIMAL_UUPS_SALT = getMinimalUUPSSalt(chainId);
+
   console.log("Deploying ERC-8004 Contracts with Vanity Addresses (Deployer Phase)");
   console.log("=====================================================================");
+  console.log("Network type:", networkType);
+  console.log("Chain ID:", chainId);
+  console.log("MinimalUUPS contract:", MINIMAL_UUPS_CONTRACT);
   console.log("Deployer address:", deployer.account.address);
   console.log("");
 
@@ -109,11 +92,11 @@ async function main() {
   // PHASE 1: Deploy MinimalUUPS placeholder via CREATE2 (single instance)
   // ============================================================================
 
-  console.log("PHASE 1: Deploying MinimalUUPS Placeholder via CREATE2");
+  console.log(`PHASE 1: Deploying ${MINIMAL_UUPS_CONTRACT} Placeholder via CREATE2`);
   console.log("=======================================================");
   console.log("");
 
-  const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
+  const minimalUUPSArtifact = await hre.artifacts.readArtifact(MINIMAL_UUPS_CONTRACT);
   const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
 
   // Calculate MinimalUUPS address
@@ -126,7 +109,7 @@ async function main() {
   const minimalUUPSCode = await publicClient.getBytecode({ address: minimalUUPSAddress });
 
   if (!minimalUUPSCode || minimalUUPSCode === "0x") {
-    console.log("Deploying MinimalUUPS...");
+    console.log(`Deploying ${MINIMAL_UUPS_CONTRACT}...`);
     const deployData = (MINIMAL_UUPS_SALT + minimalUUPSBytecode.slice(2)) as Hex;
 
     const txHash = await deployer.sendTransaction({
@@ -136,7 +119,7 @@ async function main() {
     await publicClient.waitForTransactionReceipt({ hash: txHash });
     console.log(`   ✅ Deployed at: ${minimalUUPSAddress}`);
   } else {
-    console.log("MinimalUUPS already deployed");
+    console.log(`${MINIMAL_UUPS_CONTRACT} already deployed`);
     console.log(`   ✅ Found at: ${minimalUUPSAddress}`);
   }
   console.log("");
@@ -145,7 +128,7 @@ async function main() {
   // PHASE 2: Deploy vanity proxies (pointing to MinimalUUPS initially)
   // ============================================================================
 
-  console.log("PHASE 2: Deploying Vanity Proxies");
+  console.log(`PHASE 2: Deploying Vanity Proxies (pointing to ${MINIMAL_UUPS_CONTRACT})`);
   console.log("==================================");
   console.log("");
 
@@ -324,7 +307,7 @@ async function main() {
   console.log("=".repeat(80));
   console.log("");
   console.log("✅ All contracts deployed by deployer");
-  console.log("✅ Proxies are initialized with MinimalUUPS (owner is set)");
+  console.log(`✅ Proxies are initialized with ${MINIMAL_UUPS_CONTRACT} (owner is set)`);
   console.log("");
 
   // ============================================================================

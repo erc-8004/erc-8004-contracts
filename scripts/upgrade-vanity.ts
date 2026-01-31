@@ -1,32 +1,15 @@
 import hre from "hardhat";
 import { encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
 import dotenv from "dotenv";
+import {
+  SAFE_SINGLETON_FACTORY,
+  IMPLEMENTATION_SALTS,
+  getAddresses,
+  getNetworkType,
+} from "./addresses";
 
 // Load environment variables from .env file
 dotenv.config();
-
-/**
- * SAFE Singleton CREATE2 Factory address
- */
-const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
-
-/**
- * Salts for implementation contracts (must match deploy-vanity.ts)
- */
-const IMPLEMENTATION_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
-} as const;
-
-/**
- * Expected vanity proxy addresses (deterministic across all networks)
- */
-const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
-  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
-} as const;
 
 /**
  * Upgrade vanity proxies to final implementations
@@ -43,8 +26,15 @@ async function main() {
   const { viem } = await hre.network.connect();
   const publicClient = await viem.getPublicClient();
 
+  // Get chainId and network-specific config
+  const chainId = await publicClient.getChainId();
+  const networkType = getNetworkType(chainId);
+  const EXPECTED_ADDRESSES = getAddresses(chainId);
+
   console.log("Upgrading ERC-8004 Vanity Proxies (Owner Phase)");
   console.log("================================================");
+  console.log("Network type:", networkType);
+  console.log("Chain ID:", chainId);
   console.log("");
 
   // Get owner wallet from environment variable

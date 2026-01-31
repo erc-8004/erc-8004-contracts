@@ -2,16 +2,19 @@ import hre from "hardhat";
 import { getCreate2Address, encodeFunctionData, keccak256, Hex, encodeAbiParameters } from "viem";
 import { Worker } from "worker_threads";
 import * as os from "os";
+import {
+  SAFE_SINGLETON_FACTORY,
+  TESTNET_MINIMAL_UUPS_SALT,
+  MAINNET_MINIMAL_UUPS_SALT,
+} from "./addresses";
 
 /**
- * SAFE Singleton CREATE2 Factory address
+ * Select MinimalUUPS contract based on USE_MAINNET env var
+ * Set USE_MAINNET=1 to mine salts for mainnet addresses
  */
-const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
-
-/**
- * Salt for MinimalUUPS deployment (single instance for all registries)
- */
-const MINIMAL_UUPS_SALT = "0x0000000000000000000000000000000000000000000000000000000000000001" as Hex;
+const USE_MAINNET = process.env.USE_MAINNET === "1";
+const MINIMAL_UUPS_CONTRACT = USE_MAINNET ? "MinimalUUPSMainnet" : "MinimalUUPS";
+const MINIMAL_UUPS_SALT = USE_MAINNET ? MAINNET_MINIMAL_UUPS_SALT : TESTNET_MINIMAL_UUPS_SALT;
 
 /**
  * Gets the deployment bytecode for a proxy contract
@@ -156,8 +159,9 @@ async function main() {
   console.log("");
 
   // Calculate MinimalUUPS address (single instance)
-  console.log("Step 0: Calculating MinimalUUPS address...");
-  const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
+  console.log(`Step 0: Calculating ${MINIMAL_UUPS_CONTRACT} address...`);
+  console.log(`   Mode: ${USE_MAINNET ? "MAINNET" : "TESTNET"}`);
+  const minimalUUPSArtifact = await hre.artifacts.readArtifact(MINIMAL_UUPS_CONTRACT);
   const minimalUUPSBytecode = minimalUUPSArtifact.bytecode as Hex;
 
   const minimalUUPSAddress = getCreate2Address({
@@ -166,7 +170,7 @@ async function main() {
     bytecodeHash: keccak256(minimalUUPSBytecode),
   });
 
-  console.log(`✅ MinimalUUPS: ${minimalUUPSAddress}`);
+  console.log(`✅ ${MINIMAL_UUPS_CONTRACT}: ${minimalUUPSAddress}`);
   console.log("");
 
   // Find salt for IdentityRegistry proxy (0x8004A)
@@ -223,22 +227,22 @@ async function main() {
   console.log("Vanity Proxy Salts Found!");
   console.log("=".repeat(80));
   console.log("");
-  console.log("MinimalUUPS Address:", minimalUUPSAddress);
+  console.log(`${MINIMAL_UUPS_CONTRACT} Address:`, minimalUUPSAddress);
   console.log("");
   console.log("IdentityRegistry Proxy:");
   console.log("  Salt:    ", identityResult.salt);
   console.log("  Address: ", identityResult.address);
-  console.log("  Init:     MinimalUUPS.initialize(0x0000000000000000000000000000000000000000)");
+  console.log(`  Init:     ${MINIMAL_UUPS_CONTRACT}.initialize(0x0000000000000000000000000000000000000000)`);
   console.log("");
   console.log("ReputationRegistry Proxy:");
   console.log("  Salt:    ", reputationResult.salt);
   console.log("  Address: ", reputationResult.address);
-  console.log(`  Init:     MinimalUUPS.initialize(${identityProxyAddress})`);
+  console.log(`  Init:     ${MINIMAL_UUPS_CONTRACT}.initialize(${identityProxyAddress})`);
   console.log("");
   console.log("ValidationRegistry Proxy:");
   console.log("  Salt:    ", validationResult.salt);
   console.log("  Address: ", validationResult.address);
-  console.log(`  Init:     MinimalUUPS.initialize(${identityProxyAddress})`);
+  console.log(`  Init:     ${MINIMAL_UUPS_CONTRACT}.initialize(${identityProxyAddress})`);
   console.log("");
   console.log("=".repeat(80));
   console.log("Next steps:");

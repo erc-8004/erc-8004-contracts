@@ -41,6 +41,15 @@ const config: HardhatUserConfig = {
           apiUrl: "https://api.etherscan.io/v2/api",
         }
       }
+    },
+    80002: {
+      name: "Polygon Amoy",
+      blockExplorers: {
+        etherscan: {
+          url: "https://amoy.polygonscan.com",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
     }
   },
   solidity: {
@@ -96,6 +105,12 @@ const config: HardhatUserConfig = {
       chainType: "op",
       url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
       accounts: process.env.BASE_SEPOLIA_PRIVATE_KEY ? [process.env.BASE_SEPOLIA_PRIVATE_KEY] : [],
+    },
+    polygonAmoy: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
+      accounts: process.env.POLYGON_AMOY_PRIVATE_KEY ? [process.env.POLYGON_AMOY_PRIVATE_KEY] : [],
     },
   },
 };

@@ -2,15 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
 import { getAddress, keccak256, toHex, Hex, zeroAddress } from "viem";
+import { TESTNET_ADDRESSES } from "../scripts/addresses";
 
 /**
  * Deployed vanity addresses (deterministic CREATE2 addresses)
+ * Local tests always use testnet addresses (localhost is chainId 31337)
  */
-const DEPLOYED_ADDRESSES = {
-  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e" as const,
-  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713" as const,
-  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272" as const,
-};
+const DEPLOYED_ADDRESSES = TESTNET_ADDRESSES;
 
 describe("ERC8004 Registries", async function () {
   const { viem } = await network.connect("localhost");
