@@ -57,6 +57,18 @@ async function main() {
   const publicClient = await viem.getPublicClient();
   const [deployer] = await viem.getWalletClients();
 
+  if (!deployer) {
+    const networkName = hre.network.name;
+    console.error("");
+    console.error("❌ ERROR: No wallet configured for this network.");
+    console.error("");
+    console.error(`   Please ensure the following environment variables are set in your .env file:`);
+    console.error(`   - RPC URL (e.g., ${networkName.toUpperCase().replace(/-/g, "_")}_RPC_URL)`);
+    console.error(`   - Private key (e.g., ${networkName.toUpperCase().replace(/-/g, "_")}_PRIVATE_KEY)`);
+    console.error("");
+    process.exit(1);
+  }
+
   // Get chainId and network-specific config
   const chainId = await publicClient.getChainId();
   const networkType = getNetworkType(chainId);
