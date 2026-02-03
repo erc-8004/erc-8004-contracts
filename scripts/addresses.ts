@@ -11,6 +11,7 @@ export const MAINNET_CHAIN_IDS = [
   137,    // Polygon
   43114,  // Avalanche
   56,     // BSC
+  143,    // Monad
 ];
 
 /**
@@ -25,6 +26,7 @@ export const TESTNET_CHAIN_IDS = [
   80002,    // Polygon Amoy
   43113,    // Avalanche Fuji
   97,       // BSC Testnet
+  10143,    // Monad Testnet
 ];
 
 /**
