@@ -47,6 +47,14 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: to be deployed
 - **ReputationRegistry**: to be deployed
 
+#### Mantle Mainnet
+- **IdentityRegistry**: [`0x8004A3718bD35CF767BC0E718bf21Ec4073502f0`](https://mantlescan.xyz/address/0x8004A3718bD35CF767BC0E718bf21Ec4073502f0)
+- **ReputationRegistry**: [`0x8004B1BcAb4228199Af728fF90Ed23dCc9b0Fa63`](https://mantlescan.xyz/address/0x8004B1BcAb4228199Af728fF90Ed23dCc9b0Fa63)
+
+#### Mantle Sepolia
+- **IdentityRegistry**: [`0x8004A3718bD35CF767BC0E718bf21Ec4073502f0`](https://sepolia.mantlescan.xyz/address/0x8004A3718bD35CF767BC0E718bf21Ec4073502f0)
+- **ReputationRegistry**: [`0x8004B1BcAb4228199Af728fF90Ed23dCc9b0Fa63`](https://sepolia.mantlescan.xyz/address/0x8004B1BcAb4228199Af728fF90Ed23dCc9b0Fa63)
+
 
 ## About
 
