@@ -31,10 +31,6 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: to be deployed
 - **ReputationRegistry**: to be deployed
 
-#### Polygon Amoy
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
-
 #### Hedera Testnet
 - **IdentityRegistry**: to be deployed
 - **ReputationRegistry**: to be deployed
