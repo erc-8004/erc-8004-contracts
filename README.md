@@ -13,6 +13,15 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
+#### Base Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://basescan.org/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://basescan.org/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+
+#### Base Sepolia
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
 
 #### Polygon Mainnet
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://polygonscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
@@ -23,29 +32,28 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://amoy.polygonscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://amoy.polygonscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
-#### Base Sepolia
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
 
-#### Linea Sepolia
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+#### Monad Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://monadscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://monadscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
-#### Polygon Amoy
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
 
-#### Hedera Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+#### Monad Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://monad-testnet.socialscan.io/address/0x8004a818bfb912233c491871b3d84c89a494bd9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://monad-testnet.socialscan.io/address/0x8004b663056a597dffe9eccc1965a193b7388713)
 
-#### HyperEVM Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
 
-#### SKALE Base Sepolia Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+#### BSC Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://bscscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+
+#### BSC Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.bscscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.bscscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+
+More chains coming soon...
 
 
 ## About
