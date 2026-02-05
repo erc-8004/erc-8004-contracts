@@ -86,6 +86,15 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.bscscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
 
+#### Starknet Mainnet
+- **IdentityRegistry**: [`0x33653298d42aca87f9c004c834c6830a08e8f1c0bd694faaa1412ec8fe77595`](https://voyager.online/contract/0x33653298d42aca87f9c004c834c6830a08e8f1c0bd694faaa1412ec8fe77595)
+- **ReputationRegistry**: [`0x698849defe3997eccd3dc5e096c01ae8f4fbc2e49e8d67efcb0b0642447944`](https://voyager.online/contract/0x698849defe3997eccd3dc5e096c01ae8f4fbc2e49e8d67efcb0b0642447944)
+
+#### Starknet Sepolia
+- **IdentityRegistry**: [`0x72eb37b0389e570bf8b158ce7f0e1e3489de85ba43ab3876a0594df7231631`](https://sepolia.voyager.online/contract/0x72eb37b0389e570bf8b158ce7f0e1e3489de85ba43ab3876a0594df7231631)
+- **ReputationRegistry**: [`0x5a68b5e121a014b9fc39455d4d3e0eb79fe2327329eb734ab637cee4c55c78e`](https://sepolia.voyager.online/contract/0x5a68b5e121a014b9fc39455d4d3e0eb79fe2327329eb734ab637cee4c55c78e)
+
+
 More chains coming soon...
 
 
