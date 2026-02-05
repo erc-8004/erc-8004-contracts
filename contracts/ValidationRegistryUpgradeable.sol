@@ -184,9 +184,75 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         return $._agentValidations[agentId];
     }
 
+    /**
+     * @notice Get agent validations with pagination
+     * @param agentId The ID of the agent
+     * @param offset The starting index in the list
+     * @param limit The maximum number of items to return
+     * @return requestHashes Subset of validation request hashes
+     * @return total Total number of validation requests for this agent
+     */
+    function getAgentValidationsPaginated(
+        uint256 agentId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (bytes32[] memory requestHashes, uint256 total) {
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        bytes32[] storage allRequests = $._agentValidations[agentId];
+        total = allRequests.length;
+
+        if (offset >= total || limit == 0) {
+            return (new bytes32[](0), total);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 size = end - offset;
+        requestHashes = new bytes32[](size);
+        for (uint256 i = 0; i < size; i++) {
+            requestHashes[i] = allRequests[offset + i];
+        }
+    }
+
     function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory) {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         return $._validatorRequests[validatorAddress];
+    }
+
+    /**
+     * @notice Get validator requests with pagination
+     * @param validatorAddress The address of the validator
+     * @param offset The starting index in the list
+     * @param limit The maximum number of items to return
+     * @return requestHashes Subset of validation request hashes
+     * @return total Total number of validation requests for this validator
+     */
+    function getValidatorRequestsPaginated(
+        address validatorAddress,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (bytes32[] memory requestHashes, uint256 total) {
+        ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
+        bytes32[] storage allRequests = $._validatorRequests[validatorAddress];
+        total = allRequests.length;
+
+        if (offset >= total || limit == 0) {
+            return (new bytes32[](0), total);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 size = end - offset;
+        requestHashes = new bytes32[](size);
+        for (uint256 i = 0; i < size; i++) {
+            requestHashes[i] = allRequests[offset + i];
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
