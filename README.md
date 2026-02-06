@@ -87,18 +87,10 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 
 
 #### Solana Mainnet — [SATI](https://github.com/cascade-protocol/sati)
-
-Solana-native implementation of ERC-8004 semantics (Anchor/Rust). Single program handles identity, reputation, and validation using Token-2022 for agent NFTs and Light Protocol for compressed attestation storage.
-
 - **Program**: [`satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe`](https://solscan.io/account/satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe)
-- **SDK**: [@cascade-fyi/sati-sdk](https://www.npmjs.com/package/@cascade-fyi/sati-sdk)
-- **Docs**: [cascade-protocol.github.io/sati](https://cascade-protocol.github.io/sati/specification.html)
 
-| ERC-8004 Registry | SATI Equivalent |
-|-------------------|-----------------|
-| Identity Registry | Token-2022 NFT with TokenGroup (`register_agent`, ERC-8004 compatible registration file) |
-| Reputation Registry | Compressed attestations via Light Protocol (`giveFeedback`, `getSummary` via Photon RPC) |
-| Validation Registry | Compressed attestations via Light Protocol (`ValidationV1` schema) |
+#### Solana Devnet — [SATI](https://github.com/cascade-protocol/sati)
+- **Program**: [`satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe`](https://solscan.io/account/satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe?cluster=devnet)
 
 
 More chains coming soon...
