@@ -213,10 +213,25 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
-                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
-                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
+
+                // [Fix Start] Relaxed tag matching logic
+
+                // Calculate hashes for stored tags
+                bytes32 fbTag1Hash = keccak256(bytes(fb.tag1));
+                bytes32 fbTag2Hash = keccak256(bytes(fb.tag2));
+
+                // Check if query tag1 exists in either fb.tag1 OR fb.tag2
+                if (emptyHash != tag1Hash) {
+                    bool matchFound = (tag1Hash == fbTag1Hash) || (tag1Hash == fbTag2Hash);
+                    if (!matchFound) continue;
+                }
+
+                // Check if query tag2 exists in either fb.tag1 OR fb.tag2
+                if (emptyHash != tag2Hash) {
+                    bool matchFound = (tag2Hash == fbTag1Hash) || (tag2Hash == fbTag2Hash);
+                    if (!matchFound) continue;
+                }
+                // [Fix End]
 
                 // Normalize to 18 decimals (WAD)
                 // `valueDecimals` is bounded to <= 18 on write; keep math signed.
