@@ -4,6 +4,10 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 
 ### Contract Addresses
 
+Canonical machine-readable bootstrap map:
+- [`registry-addresses.json`](./registry-addresses.json)
+- Discovery notes: [`docs/registry-address-discovery.md`](./docs/registry-address-discovery.md)
+
 #### Ethereum Mainnet
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://etherscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://etherscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
