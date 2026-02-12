@@ -128,6 +128,16 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.bscscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.bscscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
+#### Meter Mainnet
+- **IdentityRegistry Proxy**: [`0x6A863EA903544380a3D48889B65425Fe98C64510`](https://scan.meter.io/address/0x6A863EA903544380a3D48889B65425Fe98C64510)
+- **ReputationRegistry Proxy**: [`0x22992e41e37Bc28e0Eb269af4EA34ff54deec7F2`](https://scan.meter.io/address/0x22992e41e37Bc28e0Eb269af4EA34ff54deec7F2)
+- **ValidationRegistry Proxy**: [`0xb8606BDd7500EFCEBAb4B0fEb024FEc43dcE0c80`](https://scan.meter.io/address/0xb8606BDd7500EFCEBAb4B0fEb024FEc43dcE0c80)
+
+#### Meter Testnet
+- **IdentityRegistry Proxy**: [`0xe975ECd2049971298a87Fdd437c1278Bb33d8149`](https://scan-testnet.meter.io/address/0xe975ECd2049971298a87Fdd437c1278Bb33d8149)
+- **ReputationRegistry Proxy**: [`0x8Cf5cbE0C543930B1584B15DadC14bA7431273C3`](https://scan-testnet.meter.io/address/0x8Cf5cbE0C543930B1584B15DadC14bA7431273C3)
+- **ValidationRegistry Proxy**: [`0x7a18592F5e105f6ACdfefDD262d9563205dD607B`](https://scan-testnet.meter.io/address/0x7a18592F5e105f6ACdfefDD262d9563205dD607B)
+
 
 More chains coming soon...
 
