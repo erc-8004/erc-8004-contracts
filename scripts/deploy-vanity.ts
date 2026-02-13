@@ -1,5 +1,7 @@
 import hre from "hardhat";
-import { encodeAbiParameters, encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
+import { encodeAbiParameters, encodeFunctionData, Hex, keccak256, getCreate2Address, createPublicClient, createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { customChains } from "./custom-chains";
 import dotenv from "dotenv";
 import {
   SAFE_SINGLETON_FACTORY,
@@ -53,9 +55,25 @@ async function checkCreate2FactoryDeployed(publicClient: any): Promise<boolean> 
  * 3. Upgrade proxies to point to implementations and initialize
  */
 async function main() {
-  const { viem } = await hre.network.connect();
-  const publicClient = await viem.getPublicClient();
-  const [deployer] = await viem.getWalletClients();
+  const networkIdx = process.argv.indexOf("--network");
+  const networkName = networkIdx !== -1 ? process.argv[networkIdx + 1] : undefined;
+  const custom = networkName ? customChains[networkName] : undefined;
+
+  let publicClient: any;
+  let deployer: any;
+
+  if (custom) {
+    const rpcUrl = custom.rpcUrls.default.http[0];
+    const pkEnv = `${networkName!.replace(/([A-Z])/g, "_$1").toUpperCase()}_PRIVATE_KEY`;
+    const pk = process.env[pkEnv];
+    if (!pk) throw new Error(`Set ${pkEnv} in your .env`);
+    publicClient = createPublicClient({ chain: custom, transport: http(rpcUrl) });
+    deployer = createWalletClient({ account: privateKeyToAccount(pk as Hex), chain: custom, transport: http(rpcUrl) });
+  } else {
+    const { viem } = await hre.network.connect();
+    publicClient = await viem.getPublicClient();
+    [deployer] = await viem.getWalletClients();
+  }
 
   if (!deployer) {
     const networkName = hre.network.name;

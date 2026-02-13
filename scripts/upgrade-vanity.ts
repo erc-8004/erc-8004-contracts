@@ -1,5 +1,7 @@
+import { execSync } from "child_process";
 import hre from "hardhat";
-import { encodeFunctionData, Hex, keccak256, getCreate2Address } from "viem";
+import { encodeFunctionData, Hex, keccak256, serializeTransaction, getCreate2Address, createPublicClient, createWalletClient, http } from "viem";
+import { privateKeyToAccount, toAccount } from "viem/accounts";
 import dotenv from "dotenv";
 import {
   SAFE_SINGLETON_FACTORY,
@@ -7,7 +9,7 @@ import {
   getAddresses,
   getNetworkType,
 } from "./addresses";
-
+import { customChains } from "./custom-chains";
 // Load environment variables from .env file
 dotenv.config();
 
@@ -23,8 +25,19 @@ dotenv.config();
  * Each upgrade also initializes the new implementation
  */
 async function main() {
-  const { viem } = await hre.network.connect();
-  const publicClient = await viem.getPublicClient();
+  const networkIdx = process.argv.indexOf("--network");
+  const networkName = networkIdx !== -1 ? process.argv[networkIdx + 1] : undefined;
+  const custom = networkName ? customChains[networkName] : undefined;
+
+  let publicClient: any;
+
+  if (custom) {
+    const rpcUrl = custom.rpcUrls.default.http[0];
+    publicClient = createPublicClient({ chain: custom, transport: http(rpcUrl) });
+  } else {
+    const { viem } = await hre.network.connect();
+    publicClient = await viem.getPublicClient();
+  }
 
   // Get chainId and network-specific config
   const chainId = await publicClient.getChainId();
@@ -37,30 +50,70 @@ async function main() {
   console.log("Chain ID:", chainId);
   console.log("");
 
-  // Get owner wallet from environment variable
-  let ownerPrivateKey = process.env.OWNER_PRIVATE_KEY;
-  if (!ownerPrivateKey) {
-    throw new Error("OWNER_PRIVATE_KEY not found in environment variables. Please add it to .env file.");
-  }
+  // Get owner account - prefer HSM, fall back to .env private key
+  let ownerAccount;
 
-  // Ensure private key starts with 0x
-  if (!ownerPrivateKey.startsWith("0x")) {
-    ownerPrivateKey = `0x${ownerPrivateKey}`;
-  }
+  const ownerPrivateKey = process.env.OWNER_PRIVATE_KEY;
+  if (ownerPrivateKey) {
+    console.log("WARNING: Using OWNER_PRIVATE_KEY from .env - storing private keys in .env is unsafe. Consider using HSM instead.");
+    console.log("");
+    let pk = ownerPrivateKey;
+    if (!pk.startsWith("0x")) pk = `0x${pk}`;
+    if (pk.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(pk)) {
+      throw new Error(`Invalid OWNER_PRIVATE_KEY format. Expected 0x followed by 64 hex characters, got: ${pk.length} characters`);
+    }
+    ownerAccount = privateKeyToAccount(pk as `0x${string}`);
+  } else {
+    console.log("INFO: Signing using HSM (slot 1)");
+    console.log("");
 
-  // Validate private key format (should be 66 characters: 0x + 64 hex chars)
-  if (ownerPrivateKey.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(ownerPrivateKey)) {
-    throw new Error(`Invalid OWNER_PRIVATE_KEY format. Expected 0x followed by 64 hex characters, got: ${ownerPrivateKey.length} characters`);
-  }
+    function hsm(cmd: string): string {
+      for (let i = 0; i < 3; i++) {
+        try {
+          return execSync(`hsm ${cmd}`, { timeout: 5000 }).toString().trim();
+        } catch {
+          if (i === 2) throw new Error(`hsm ${cmd} failed after 3 retries`);
+          execSync("sleep 1");
+        }
+      }
+      throw new Error("unreachable");
+    }
 
-  const { createWalletClient, http } = await import("viem");
-  const { privateKeyToAccount } = await import("viem/accounts");
-  const ownerAccount = privateKeyToAccount(ownerPrivateKey as `0x${string}`);
-  const ownerWallet = createWalletClient({
-    account: ownerAccount,
-    chain: (await viem.getPublicClient()).chain,
-    transport: http(),
-  });
+    const info = JSON.parse(hsm("addr"));
+    const hsmAddress = info.address as Hex;
+
+    ownerAccount = toAccount({
+      address: hsmAddress,
+      async signMessage({ message }) {
+        const msg = typeof message === "string" ? new TextEncoder().encode(message) : message;
+        const hash = keccak256(msg as Hex);
+        const raw = hash.startsWith("0x") ? hash.slice(2) : hash;
+        const result = JSON.parse(hsm(`sign ${raw}`));
+        return `${result.r}${(result.s as string).slice(2)}${(result.v - 27).toString(16).padStart(2, "0")}` as Hex;
+      },
+      async signTransaction(tx, { serializer = serializeTransaction } = {}) {
+        const serialized = serializer(tx);
+        const hash = keccak256(serialized);
+        const raw = hash.startsWith("0x") ? hash.slice(2) : hash;
+        const result = JSON.parse(hsm(`sign ${raw}`));
+        return serializer(tx, { r: result.r, s: result.s, v: BigInt(result.v) });
+      },
+      async signTypedData() {
+        throw new Error("signTypedData not implemented");
+      },
+    });
+  }
+  const ownerWallet = custom
+    ? createWalletClient({
+        account: ownerAccount,
+        chain: custom,
+        transport: http(custom.rpcUrls.default.http[0]),
+      })
+    : createWalletClient({
+        account: ownerAccount,
+        chain: publicClient.chain,
+        transport: http(),
+      });
 
   console.log("Owner address:", ownerAccount.address);
   console.log("");

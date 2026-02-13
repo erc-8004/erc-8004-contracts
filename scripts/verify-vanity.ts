@@ -1,17 +1,30 @@
 import hre from "hardhat";
+import { createPublicClient, http } from "viem";
 import {
   EXPECTED_OWNER,
   getAddresses,
   getNetworkType,
 } from "./addresses";
+import { customChains } from "./custom-chains";
 
 /**
  * Verify vanity deployment
  * This script checks that all contracts are properly deployed and configured
  */
 async function main() {
-  const { viem } = await hre.network.connect() as any;
-  const publicClient = await viem.getPublicClient();
+  const networkIdx = process.argv.indexOf("--network");
+  const networkName = networkIdx !== -1 ? process.argv[networkIdx + 1] : undefined;
+  const custom = networkName ? customChains[networkName] : undefined;
+
+  let publicClient: any;
+
+  if (custom) {
+    const rpcUrl = custom.rpcUrls.default.http[0];
+    publicClient = createPublicClient({ chain: custom, transport: http(rpcUrl) });
+  } else {
+    const { viem } = await hre.network.connect() as any;
+    publicClient = await viem.getPublicClient();
+  }
 
   // Get chainId and network-specific config
   const chainId = await publicClient.getChainId();

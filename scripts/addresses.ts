@@ -12,6 +12,20 @@ export const MAINNET_CHAIN_IDS = [
   43114,  // Avalanche
   56,     // BSC
   143,    // Monad
+  534352, // Scroll
+  100,    // Gnosis
+  42220,  // Celo
+  167000, // Taiko
+  59144,  // Linea
+  4326,   // MegaETH
+  196,    // XLayer
+  2741,   // Abstract
+  5000,   // Mantle
+  1868,   // Soneium
+  2345,   // GOAT Network
+  1088,   // Metis
+  295,    // Hedera
+  1187947933, // SKALE Base
 ];
 
 /**
@@ -27,6 +41,20 @@ export const TESTNET_CHAIN_IDS = [
   43113,    // Avalanche Fuji
   97,       // BSC Testnet
   10143,    // Monad Testnet
+  534351,   // Scroll Sepolia
+  10200,    // Gnosis Chiado
+  11142220, // Celo Sepolia
+  167013,   // Taiko Hoodi
+  6343,     // MegaETH Testnet
+  59141,    // Linea Sepolia
+  1952,      // XLayer Testnet
+  11124,    // Abstract Sepolia
+  5003,     // Mantle Sepolia
+  1946,     // Soneium Minato
+  48816,    // GOAT Testnet3
+  59902,    // Metis Sepolia
+  296,      // Hedera Testnet
+  324705682, // SKALE Base Sepolia
 ];
 
 /**

@@ -47,6 +47,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@okxweb3/hardhat-explorer-verify": "^1.6.5",
     "@openzeppelin/contracts": "^5.4.0",
     "@safe-global/safe-singleton-factory": "^2.0.0",
     "dotenv": "^17.2.3"
