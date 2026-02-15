@@ -38,7 +38,7 @@ The following terms are used throughout this specification:
 | **DID**                  | Decentralized Identifier as defined by the [W3C specification](https://www.w3.org/TR/did-core/#terminology).                        |
 | **canonicalDID**         | The normalized form of a DID string as defined in this Extension.                                                                   |
 | **didHash**              | The Keccak-256 hash of a canonicalDID as defined in this Extension.                                                                 |
-| **DID Address**          | A 20-byte value derived by truncating a didHash, for use as an EAS recipient. Defined in this Extension.                            |
+| **DID Address**          | An EAS recipient `bytes20` value derived by truncating a didHash. See *Output Encoding (Normative)* for serialization rules.        |
 
 Terms defined in the Base Specification are incorporated by reference.
 
@@ -150,6 +150,18 @@ A DID Address MUST be computed by truncating the didHash to 20 bytes. The comput
 3. The resulting 20-byte value is the DID Address
 
 The DID Address can be used anywhere an `address` index is expected—EAS recipients, event partition keys, or contract mappings. Collision risk is negligible (≈ 1 / 2^160).
+
+**Output Encoding (Normative)**
+
+The DID Address is conceptually a 20-byte value (`bytes20`).
+
+When serialized as a string, it MUST be:
+
+- `0x`-prefixed
+- lowercase
+- exactly 40 hexadecimal characters
+
+EIP-55 checksum casing MUST NOT be required.
 
 **Solidity Example:**
 
