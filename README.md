@@ -112,6 +112,18 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://taikoscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://taikoscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
+#### TRON Mainnet
+- **IdentityRegistry**: [`THmfi8uJuUpTfUmYLDX7UD1KaE4P6HKgqA`](https://tronscan.org/#/contract/THmfi8uJuUpTfUmYLDX7UD1KaE4P6HKgqA)
+- **ReputationRegistry**: [`TV8KWmp8qcj55sjs1NSjVxmRmZP7CYzNxH`](https://tronscan.org/#/contract/TV8KWmp8qcj55sjs1NSjVxmRmZP7CYzNxH)
+- **ValidationRegistry**: [`TCoJA4BYXWZhp5eanCchMw67VA83tQ83n1`](https://tronscan.org/#/contract/TCoJA4BYXWZhp5eanCchMw67VA83tQ83n1)
+- **IncidentRegistry**: [`TJ26Pu24ar7Qdh9Bm6tbBVdtzCJkbxS5eR`](https://tronscan.org/#/contract/TJ26Pu24ar7Qdh9Bm6tbBVdtzCJkbxS5eR)
+
+#### TRON Shasta (Testnet)
+- **IdentityRegistry**: [`TFKNqk9bjwWp5uRiiGimqfLhVQB8jSxYi7`](https://shasta.tronscan.org/#/contract/TFKNqk9bjwWp5uRiiGimqfLhVQB8jSxYi7)
+- **ReputationRegistry**: [`TRaYogyr2qc7WgsmuVF5Js39aCmoG7vZrA`](https://shasta.tronscan.org/#/contract/TRaYogyr2qc7WgsmuVF5Js39aCmoG7vZrA)
+- **ValidationRegistry**: [`TPgGWWyUdxNryUCN49TdT4b3F4WB3Edr16`](https://shasta.tronscan.org/#/contract/TPgGWWyUdxNryUCN49TdT4b3F4WB3Edr16)
+- **IncidentRegistry**: [`TPB59NFdypBpkJtWH7yE8XenKrdT1Q4g4s`](https://shasta.tronscan.org/#/contract/TPB59NFdypBpkJtWH7yE8XenKrdT1Q4g4s)
+
 #### Monad Mainnet
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://monadscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://monadscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
