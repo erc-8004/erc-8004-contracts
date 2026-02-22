@@ -4,6 +4,7 @@ import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import dotenv from "dotenv";
+import { unichainSepolia } from "viem/chains";
 
 dotenv.config();
 
@@ -96,6 +97,12 @@ const config: HardhatUserConfig = {
       chainType: "op",
       url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
       accounts: process.env.BASE_SEPOLIA_PRIVATE_KEY ? [process.env.BASE_SEPOLIA_PRIVATE_KEY] : [],
+    },
+    unichainSepolia: {
+      type: "http",
+      chainType: "op",
+      url: process.env.UNICHAIN_SEPOLIA_RPC_URL || "https://sepolia.unichain.org",
+      accounts: process.env.UNICHAIN_SEPOLIA_PRIVATE_KEY ? [process.env.UNICHAIN_SEPOLIA_PRIVATE_KEY] : [],
     },
   },
 };
