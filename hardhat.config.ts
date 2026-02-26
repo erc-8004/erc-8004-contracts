@@ -473,6 +473,24 @@ const config: HardhatUserConfig = {
           apiUrl: "https://testnet.arcscan.app/api",
         }
       }
+    },
+    747: {
+      name: "Flow EVM Mainnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://evm.flowscan.io",
+          apiUrl: "https://evm.flowscan.io/api",
+        }
+      }
+    },
+    545: {
+      name: "Flow EVM Testnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://evm-testnet.flowscan.io",
+          apiUrl: "https://evm-testnet.flowscan.io/api",
+        }
+      }
     }
   },
   solidity: {
@@ -793,6 +811,18 @@ const config: HardhatUserConfig = {
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
     },
+    flowTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.FLOW_TESTNET_RPC_URL || "https://testnet.evm.nodes.onflow.org",
+      accounts: process.env.FLOW_TESTNET_PRIVATE_KEY ? [process.env.FLOW_TESTNET_PRIVATE_KEY] : [],
+    },
+    flowMainnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.FLOW_MAINNET_RPC_URL || "https://mainnet.evm.nodes.onflow.org",
+      accounts: process.env.FLOW_MAINNET_PRIVATE_KEY ? [process.env.FLOW_MAINNET_PRIVATE_KEY] : [],
+    }
   },
 };
 
