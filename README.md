@@ -128,6 +128,14 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.bscscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.bscscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
+#### Flow EVM Mainnet
+- **IdentityRegistry**: [`0x8004A3e06Ff36d49EefAEFC3c73A42303c85ea5A`](https://evm.flowscan.io/address/0x8004A3e06Ff36d49EefAEFC3c73A42303c85ea5A)
+- **ReputationRegistry**: [`0x8004BA955077C74e7AB84f57972E4Da4388c5a62`](https://evm.flowscan.io/address/0x8004BA955077C74e7AB84f57972E4Da4388c5a62)
+
+#### Flow EVM Testnet
+- **IdentityRegistry**: [`0x8004A3e06Ff36d49EefAEFC3c73A42303c85ea5A`](https://evm-testnet.flowscan.io/address/0x8004A3e06Ff36d49EefAEFC3c73A42303c85ea5A)
+- **ReputationRegistry**: [`0x8004BA955077C74e7AB84f57972E4Da4388c5a62`](https://evm-testnet.flowscan.io/address/0x8004BA955077C74e7AB84f57972E4Da4388c5a62)
+
 
 More chains coming soon...
 
