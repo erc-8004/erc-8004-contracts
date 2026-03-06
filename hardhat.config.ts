@@ -424,6 +424,10 @@ const config: HardhatUserConfig = {
     1187947933: {
       name: "SKALE Base",
       blockExplorers: {
+        etherscan: {
+          url: "https://skale-base-explorer.skalenodes.com",
+          apiUrl: "https://skale-base-explorer.skalenodes.com/api",
+        },
         blockscout: {
           url: "https://skale-base-explorer.skalenodes.com",
           apiUrl: "https://skale-base-explorer.skalenodes.com/api",
@@ -433,9 +437,40 @@ const config: HardhatUserConfig = {
     324705682: {
       name: "SKALE Base Sepolia",
       blockExplorers: {
+        etherscan: {
+          url: "https://base-sepolia-testnet-explorer.skalenodes.com",
+          apiUrl: "https://base-sepolia-testnet-explorer.skalenodes.com/api",
+        },
         blockscout: {
           url: "https://base-sepolia-testnet-explorer.skalenodes.com",
           apiUrl: "https://base-sepolia-testnet-explorer.skalenodes.com/api",
+        }
+      }
+    },
+    360: {
+      name: "Shape",
+      blockExplorers: {
+        blockscout: {
+          url: "https://shapescan.xyz",
+          apiUrl: "https://shapescan.xyz/api",
+        }
+      }
+    },
+    11011: {
+      name: "Shape Sepolia",
+      blockExplorers: {
+        blockscout: {
+          url: "https://explorer-sepolia.shape.network",
+          apiUrl: "https://explorer-sepolia.shape.network/api",
+        }
+      }
+    },
+    5042002: {
+      name: "Arc Testnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://testnet.arcscan.app",
+          apiUrl: "https://testnet.arcscan.app/api",
         }
       }
     }
@@ -739,6 +774,24 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.SKALE_BASE_RPC_URL || "https://skale-base.skalenodes.com/v1/base",
       accounts: process.env.SKALE_BASE_PRIVATE_KEY ? [process.env.SKALE_BASE_PRIVATE_KEY] : [],
+    },
+    shape: {
+      type: "http",
+      chainType: "op",
+      url: process.env.SHAPE_RPC_URL || "https://mainnet.shape.network",
+      accounts: process.env.SHAPE_PRIVATE_KEY ? [process.env.SHAPE_PRIVATE_KEY] : [],
+    },
+    shapeSepolia: {
+      type: "http",
+      chainType: "op",
+      url: process.env.SHAPE_SEPOLIA_RPC_URL || "https://sepolia.shape.network",
+      accounts: process.env.SHAPE_SEPOLIA_PRIVATE_KEY ? [process.env.SHAPE_SEPOLIA_PRIVATE_KEY] : [],
+    },
+    arcTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
+      accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
     },
   },
 };
