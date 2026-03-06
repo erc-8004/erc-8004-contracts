@@ -8,34 +8,171 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://etherscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://etherscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
-
 #### Ethereum Sepolia
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
+#### Base Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://basescan.org/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://basescan.org/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
 #### Base Sepolia
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.basescan.org/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.basescan.org/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Abstract Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://explorer.mainnet.abs.xyz/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://explorer.mainnet.abs.xyz/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Abstract Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://explorer.testnet.abs.xyz/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://explorer.testnet.abs.xyz/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Arbitrum Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://arbiscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://arbiscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Arbitrum Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.arbiscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.arbiscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Avalanche Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://snowtrace.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://snowtrace.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Avalanche Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.snowtrace.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.snowtrace.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### BSC Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://bscscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### BSC Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.bscscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.bscscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Celo Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://celoscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://celoscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Celo Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.celoscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.celoscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Gnosis Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://gnosisscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://gnosisscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### GOAT Network Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://explorer.goat.network/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://explorer.goat.network/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Linea Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://lineascan.build/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://lineascan.build/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
 #### Linea Sepolia
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.lineascan.build/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.lineascan.build/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Mantle Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://mantlescan.xyz/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://mantlescan.xyz/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Mantle Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.mantlescan.xyz/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.mantlescan.xyz/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### MegaETH Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://megaeth.blockscout.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://megaeth.blockscout.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### MegaETH Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://megaeth-testnet-v2.blockscout.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://megaeth-testnet-v2.blockscout.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Metis Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://andromeda-explorer.metis.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://andromeda-explorer.metis.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Metis Sepolia
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia-explorer.metisdevops.link/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia-explorer.metisdevops.link/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Monad Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://monadscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://monadscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Monad Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://monad-testnet.socialscan.io/address/0x8004a818bfb912233c491871b3d84c89a494bd9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://monad-testnet.socialscan.io/address/0x8004b663056a597dffe9eccc1965a193b7388713)
+
+#### Optimism Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://explorer.optimism.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://explorer.optimism.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Optimism Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet-explorer.optimism.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet-explorer.optimism.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Polygon Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://polygonscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://polygonscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
 
 #### Polygon Amoy
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://amoy.polygonscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://amoy.polygonscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Scroll Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://scrollscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://scrollscan.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Scroll Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.scrollscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.scrollscan.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### SKALE Base Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://skale-base-explorer.skalenodes.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://skale-base-explorer.skalenodes.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### SKALE Base Sepolia
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://base-sepolia-testnet-explorer.skalenodes.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://base-sepolia-testnet-explorer.skalenodes.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Soneium Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://soneium.blockscout.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://soneium.blockscout.com/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Soneium Minato
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://soneium-minato.blockscout.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://soneium-minato.blockscout.com/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### Taiko Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://taikoscan.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://taikoscan.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### Taiko Hoodi
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://hoodi.taikoscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://hoodi.taikoscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
+
+#### XLayer Mainnet
+- **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://www.oklink.com/xlayer/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
+- **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://www.oklink.com/xlayer/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
+
+#### XLayer Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://www.oklink.com/xlayer-test/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://www.oklink.com/xlayer-test/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
 #### Hedera Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://hashscan.io/testnet/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://hashscan.io/testnet/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
-#### HyperEVM Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+#### Arc Testnet
+- **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.arcscan.app/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
+- **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.arcscan.app/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
-#### SKALE Base Sepolia Testnet
-- **IdentityRegistry**: to be deployed
-- **ReputationRegistry**: to be deployed
+More chains coming soon...
 
 
 ## About
@@ -81,7 +218,7 @@ An agent is identified by:
 
 Off-chain payloads (registration files, feedback files, evidence) should include both fields so they can be tied back to the on-chain agent.
 
-### What ERC-8004 does (and doesn’t)
+### What ERC-8004 does (and doesn't)
 
 - **Discovery**: ERC-8004 makes agents discoverable via an ERC-721 identity whose `tokenURI` points to a registration file.
 - **Trust signals**: ERC-8004 standardizes how reputation and validation signals are posted and queried on-chain.
@@ -95,7 +232,7 @@ The Identity Registry is an upgradeable ERC-721 (`ERC721URIStorage`) where:
 
 - **agentURI** (`tokenURI`) points to the agent registration file (e.g., `ipfs://...` or `https://...`).
 - **register** mints a new agent NFT and assigns an `agentId`.
-- **setAgentURI** updates the agent’s URI.
+- **setAgentURI** updates the agent's URI.
 
 #### On-chain metadata
 
@@ -106,14 +243,14 @@ The registry also provides optional on-chain metadata:
 
 The reserved key **`agentWallet`** is managed specially:
 
-- It is set automatically on registration (initially to the owner’s address).
+- It is set automatically on registration (initially to the owner's address).
 - It can be updated only after proving control of the new wallet via `setAgentWallet(...)` (EIP-712 / ERC-1271).
 - It is cleared on transfer so a new owner must re-verify.
 - Helpers: `getAgentWallet(agentId)` and `unsetAgentWallet(agentId)`.
 
 #### Agent registration file (recommended shape)
 
-The `agentURI` should resolve to a JSON document that is friendly to NFT tooling (name/description/image) and also advertises agent endpoints. The spec’s registration file includes:
+The `agentURI` should resolve to a JSON document that is friendly to NFT tooling (name/description/image) and also advertises agent endpoints. The spec's registration file includes:
 
 - `type`: schema identifier for the registration format
 - `name`, `description`, `image`
@@ -186,7 +323,7 @@ The current implementation supports:
 
 ### Agent registration file (Identity Registry)
 
-The agent’s `agentURI` should resolve to a registration file (see `ERC8004SPEC.md`) containing human-friendly metadata plus a list of advertised services/endpoints (e.g., A2A, MCP, OASF, ENS, email).
+The agent's `agentURI` should resolve to a registration file (see `ERC8004SPEC.md`) containing human-friendly metadata plus a list of advertised services/endpoints (e.g., A2A, MCP, OASF, ENS, email).
 
 ### Feedback file (optional, Reputation Registry)
 
