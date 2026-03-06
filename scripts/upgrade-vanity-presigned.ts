@@ -1,20 +1,12 @@
 import hre from "hardhat";
 import { Hex, keccak256, getCreate2Address } from "viem";
 import fs from "fs";
-
-/**
- * SAFE Singleton CREATE2 Factory address
- */
-const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
-
-/**
- * Salts for implementation contracts (must match deploy-vanity.ts)
- */
-const IMPLEMENTATION_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
-} as const;
+import {
+  SAFE_SINGLETON_FACTORY,
+  IMPLEMENTATION_SALTS,
+  getAddresses,
+  getNetworkType,
+} from "./addresses";
 
 /**
  * Upgrade vanity proxies using PRE-EXISTING pre-signed transactions
@@ -33,9 +25,14 @@ async function main() {
   const [deployer] = await viem.getWalletClients();
   const chainId = await publicClient.getChainId();
 
+  // Get network-specific config
+  const networkType = getNetworkType(chainId);
+  const addresses = getAddresses(chainId);
+
   console.log("=".repeat(80));
   console.log("Upgrading ERC-8004 Vanity Proxies (Pre-Signed Transactions)");
   console.log("=".repeat(80));
+  console.log("Network type:", networkType);
   console.log("Chain ID:", chainId);
   console.log("Deployer:", deployer.account.address);
   console.log("");
@@ -62,16 +59,16 @@ async function main() {
   });
 
   // Expected contracts with calculated implementation addresses
-  const EXPECTED_IMPLEMENTATIONS = {
-    "0x8004A818BFB912233c491871b3d84c89A494BD9e": {
+  const EXPECTED_IMPLEMENTATIONS: Record<string, { name: string; implementation: string }> = {
+    [addresses.identityRegistry]: {
       name: "IdentityRegistry",
       implementation: identityImplAddress,
     },
-    "0x8004B663056A597Dffe9eCcC1965A193B7388713": {
+    [addresses.reputationRegistry]: {
       name: "ReputationRegistry",
       implementation: reputationImplAddress,
     },
-    "0x8004Cb1BF31DAf7788923b405b754f57acEB4272": {
+    [addresses.validationRegistry]: {
       name: "ValidationRegistry",
       implementation: validationImplAddress,
     },

@@ -1,29 +1,40 @@
 import hre from "hardhat";
-
-/**
- * Expected vanity proxy addresses (deterministic across all networks)
- */
-const EXPECTED_ADDRESSES = {
-  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
-  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
-} as const;
-
-/**
- * Expected owner address (from MinimalUUPS.sol)
- */
-const EXPECTED_OWNER = "0x547289319C3e6aedB179C0b8e8aF0B5ACd062603" as const;
+import { createPublicClient, http } from "viem";
+import {
+  EXPECTED_OWNER,
+  getAddresses,
+  getNetworkType,
+} from "./addresses";
+import { customChains } from "./custom-chains";
 
 /**
  * Verify vanity deployment
  * This script checks that all contracts are properly deployed and configured
  */
 async function main() {
-  const { viem } = await hre.network.connect() as any;
-  const publicClient = await viem.getPublicClient();
+  const networkIdx = process.argv.indexOf("--network");
+  const networkName = networkIdx !== -1 ? process.argv[networkIdx + 1] : undefined;
+  const custom = networkName ? customChains[networkName] : undefined;
+
+  let publicClient: any;
+
+  if (custom) {
+    const rpcUrl = custom.rpcUrls.default.http[0];
+    publicClient = createPublicClient({ chain: custom, transport: http(rpcUrl) });
+  } else {
+    const { viem } = await hre.network.connect() as any;
+    publicClient = await viem.getPublicClient();
+  }
+
+  // Get chainId and network-specific config
+  const chainId = await publicClient.getChainId();
+  const networkType = getNetworkType(chainId);
+  const EXPECTED_ADDRESSES = getAddresses(chainId);
 
   console.log("Verifying ERC-8004 Vanity Deployment");
   console.log("=====================================");
+  console.log("Network type:", networkType);
+  console.log("Chain ID:", chainId);
   console.log("");
 
   // Load ABIs once

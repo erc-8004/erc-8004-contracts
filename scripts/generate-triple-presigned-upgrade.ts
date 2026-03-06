@@ -3,32 +3,15 @@ import { encodeFunctionData, Hex, parseGwei, keccak256, getCreate2Address } from
 import { privateKeyToAccount } from "viem/accounts";
 import dotenv from "dotenv";
 import fs from "fs";
+import {
+  SAFE_SINGLETON_FACTORY,
+  IMPLEMENTATION_SALTS,
+  getAddresses,
+  getNetworkType,
+} from "./addresses";
 
 // Load environment variables
 dotenv.config();
-
-/**
- * SAFE Singleton CREATE2 Factory address
- */
-const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7" as const;
-
-/**
- * Salts for implementation contracts (must match deploy-vanity.ts)
- */
-const IMPLEMENTATION_SALTS = {
-  identityRegistry: "0x0000000000000000000000000000000000000000000000000000000000000005" as Hex,
-  reputationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000006" as Hex,
-  validationRegistry: "0x0000000000000000000000000000000000000000000000000000000000000007" as Hex,
-} as const;
-
-/**
- * Expected vanity proxy addresses
- */
-const PROXIES = {
-  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
-  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
-} as const;
 
 /**
  * Generate 3 pre-signed upgrade transactions
@@ -39,9 +22,14 @@ async function main() {
   const publicClient = await viem.getPublicClient();
   const chainId = await publicClient.getChainId();
 
+  // Get network-specific config
+  const networkType = getNetworkType(chainId);
+  const PROXIES = getAddresses(chainId);
+
   console.log("=".repeat(80));
   console.log("Generating 3 Pre-Signed Upgrade Transactions");
   console.log("=".repeat(80));
+  console.log("Network type:", networkType);
   console.log("Chain ID:", chainId);
   console.log("");
 
