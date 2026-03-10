@@ -1796,12 +1796,15 @@ describe("ERC8004 Registries", async function () {
         { account: validator2.account }
       );
 
-      // Get summary - NOTE: Contract has bug where getSummary takes bytes32 but stores string tags
-      // So filtering doesn't work correctly. Passing bytes32(0) to attempt match-all
-      const summary = await validationRegistry.read.getSummary([agentId, [], "0x0000000000000000000000000000000000000000000000000000000000000000"]);
-      // Due to contract bug, count will be 0 instead of 2
-      assert.equal(summary[0], 0n); // count (broken due to tag type mismatch)
-      assert.equal(summary[1], 0); // average (no valid responses matched) - uint8 returns as number
+      // Get summary with tag filter
+      const summaryByTag = await validationRegistry.read.getSummary([agentId, [], tag]);
+      assert.equal(summaryByTag[0], 2n); // count = 2
+      assert.equal(summaryByTag[1], 90); // average = (80 + 100) / 2 = 90
+
+      // Get summary with empty string wildcard (matches all tags)
+      const summaryAll = await validationRegistry.read.getSummary([agentId, [], ""]);
+      assert.equal(summaryAll[0], 2n); // count = 2
+      assert.equal(summaryAll[1], 90); // average = (80 + 100) / 2 = 90
 
       // Get agent validations
       const validations = await validationRegistry.read.getAgentValidations([agentId]);
@@ -1960,6 +1963,194 @@ describe("ERC8004 Registries", async function () {
 
       const status = await validationRegistry.read.getValidationStatus([requestHash]);
       assert.equal(status[2], 67);
+    });
+
+    /**
+     * Security: Rogue validators should not be able to decrease response values (Issue #28)
+     */
+    it("Should reject decreasing validation response values", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+
+      const [owner, validator] = await viem.getWalletClients();
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const requestHash = keccak256(toHex("monotonic test"));
+
+      await validationRegistry.write.validationRequest([
+        validator.account.address,
+        agentId,
+        "ipfs://req",
+        requestHash,
+      ]);
+
+      // First response: 80
+      await validationRegistry.write.validationResponse(
+        [requestHash, 80, "ipfs://resp1", keccak256(toHex("r1")), "initial"],
+        { account: validator.account }
+      );
+
+      let status = await validationRegistry.read.getValidationStatus([requestHash]);
+      assert.equal(status[2], 80);
+
+      // Attempt to decrease to 50 — should revert
+      await assert.rejects(
+        validationRegistry.write.validationResponse(
+          [requestHash, 50, "ipfs://resp2", keccak256(toHex("r2")), "downgrade"],
+          { account: validator.account }
+        ),
+        /response cannot decrease/i
+      );
+
+      // Attempt to decrease to 0 — should revert
+      await assert.rejects(
+        validationRegistry.write.validationResponse(
+          [requestHash, 0, "ipfs://resp3", keccak256(toHex("r3")), "zero"],
+          { account: validator.account }
+        ),
+        /response cannot decrease/i
+      );
+
+      // Equal value should succeed (idempotent update)
+      await validationRegistry.write.validationResponse(
+        [requestHash, 80, "ipfs://resp4", keccak256(toHex("r4")), "same"],
+        { account: validator.account }
+      );
+
+      // Increase should succeed
+      await validationRegistry.write.validationResponse(
+        [requestHash, 100, "ipfs://resp5", keccak256(toHex("r5")), "final"],
+        { account: validator.account }
+      );
+
+      status = await validationRegistry.read.getValidationStatus([requestHash]);
+      assert.equal(status[2], 100);
+    });
+
+    /**
+     * Security: Verify getSummary tag filtering works correctly with string tags
+     */
+    it("Should filter getSummary by string tag correctly", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+
+      const [owner, validator1, validator2, validator3] = await viem.getWalletClients();
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const req1 = keccak256(toHex("tag-filter-req1"));
+      const req2 = keccak256(toHex("tag-filter-req2"));
+      const req3 = keccak256(toHex("tag-filter-req3"));
+
+      await validationRegistry.write.validationRequest([validator1.account.address, agentId, "ipfs://req1", req1]);
+      await validationRegistry.write.validationRequest([validator2.account.address, agentId, "ipfs://req2", req2]);
+      await validationRegistry.write.validationRequest([validator3.account.address, agentId, "ipfs://req3", req3]);
+
+      // Respond with different tags
+      await validationRegistry.write.validationResponse(
+        [req1, 80, "ipfs://r1", keccak256(toHex("r1")), "security"],
+        { account: validator1.account }
+      );
+      await validationRegistry.write.validationResponse(
+        [req2, 90, "ipfs://r2", keccak256(toHex("r2")), "performance"],
+        { account: validator2.account }
+      );
+      await validationRegistry.write.validationResponse(
+        [req3, 100, "ipfs://r3", keccak256(toHex("r3")), "security"],
+        { account: validator3.account }
+      );
+
+      // Filter by "security" tag — should match 2
+      const secSummary = await validationRegistry.read.getSummary([agentId, [], "security"]);
+      assert.equal(secSummary[0], 2n); // count
+      assert.equal(secSummary[1], 90); // avg = (80 + 100) / 2
+
+      // Filter by "performance" tag — should match 1
+      const perfSummary = await validationRegistry.read.getSummary([agentId, [], "performance"]);
+      assert.equal(perfSummary[0], 1n);
+      assert.equal(perfSummary[1], 90);
+
+      // Empty string wildcard — should match all 3
+      const allSummary = await validationRegistry.read.getSummary([agentId, [], ""]);
+      assert.equal(allSummary[0], 3n);
+      assert.equal(allSummary[1], 90); // avg = (80 + 90 + 100) / 3 = 90
+
+      // Non-existent tag — should match 0
+      const noneSummary = await validationRegistry.read.getSummary([agentId, [], "nonexistent"]);
+      assert.equal(noneSummary[0], 0n);
+      assert.equal(noneSummary[1], 0);
+    });
+
+    /**
+     * Security: getSummary should filter by validator addresses correctly
+     */
+    it("Should filter getSummary by validator addresses", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+
+      const [owner, validator1, validator2] = await viem.getWalletClients();
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const req1 = keccak256(toHex("validator-filter-req1"));
+      const req2 = keccak256(toHex("validator-filter-req2"));
+
+      await validationRegistry.write.validationRequest([validator1.account.address, agentId, "ipfs://req1", req1]);
+      await validationRegistry.write.validationRequest([validator2.account.address, agentId, "ipfs://req2", req2]);
+
+      await validationRegistry.write.validationResponse(
+        [req1, 70, "ipfs://r1", keccak256(toHex("r1")), "audit"],
+        { account: validator1.account }
+      );
+      await validationRegistry.write.validationResponse(
+        [req2, 90, "ipfs://r2", keccak256(toHex("r2")), "audit"],
+        { account: validator2.account }
+      );
+
+      // Filter by validator1 only
+      const v1Summary = await validationRegistry.read.getSummary([agentId, [validator1.account.address], ""]);
+      assert.equal(v1Summary[0], 1n);
+      assert.equal(v1Summary[1], 70);
+
+      // Filter by validator2 only
+      const v2Summary = await validationRegistry.read.getSummary([agentId, [validator2.account.address], ""]);
+      assert.equal(v2Summary[0], 1n);
+      assert.equal(v2Summary[1], 90);
+
+      // Filter by both validators
+      const bothSummary = await validationRegistry.read.getSummary([agentId, [validator1.account.address, validator2.account.address], ""]);
+      assert.equal(bothSummary[0], 2n);
+      assert.equal(bothSummary[1], 80); // avg = (70 + 90) / 2
+    });
+
+    /**
+     * Security: getSummary should exclude validations without responses
+     */
+    it("Should exclude pending validations from getSummary", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+
+      const [owner, validator1, validator2] = await viem.getWalletClients();
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const req1 = keccak256(toHex("pending-test-req1"));
+      const req2 = keccak256(toHex("pending-test-req2"));
+
+      await validationRegistry.write.validationRequest([validator1.account.address, agentId, "ipfs://req1", req1]);
+      await validationRegistry.write.validationRequest([validator2.account.address, agentId, "ipfs://req2", req2]);
+
+      // Only respond to req1, leave req2 pending
+      await validationRegistry.write.validationResponse(
+        [req1, 85, "ipfs://r1", keccak256(toHex("r1")), "test"],
+        { account: validator1.account }
+      );
+
+      // Summary should only count the responded validation
+      const summary = await validationRegistry.read.getSummary([agentId, [], ""]);
+      assert.equal(summary[0], 1n); // count = 1 (not 2)
+      assert.equal(summary[1], 85);
     });
   });
 });

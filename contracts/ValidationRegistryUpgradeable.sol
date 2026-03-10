@@ -124,6 +124,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         require(s.validatorAddress != address(0), "unknown");
         require(msg.sender == s.validatorAddress, "not validator");
         require(response <= 100, "resp>100");
+        require(response >= s.response, "response cannot decrease");
         s.response = response;
         s.responseHash = responseHash;
         s.tag = tag;
