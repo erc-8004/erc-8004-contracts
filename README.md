@@ -172,6 +172,13 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.arcscan.app/address/0x8004A818BFB912233c491871b3d84c89A494BD9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://testnet.arcscan.app/address/0x8004B663056A597Dffe9eCcC1965A193B7388713)
 
+#### Solana Mainnet — [SATI](https://github.com/cascade-protocol/sati)
+- **Program**: [`satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe`](https://solscan.io/account/satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe)
+
+#### Solana Devnet — [SATI](https://github.com/cascade-protocol/sati)
+- **Program**: [`satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe`](https://solscan.io/account/satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe?cluster=devnet)
+
+
 More chains coming soon...
 
 
