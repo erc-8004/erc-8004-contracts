@@ -108,6 +108,14 @@ Implementation of the ERC-8004 protocol for agent discovery and trust through re
 - **IdentityRegistry**: [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://monad-testnet.socialscan.io/address/0x8004a818bfb912233c491871b3d84c89a494bd9e)
 - **ReputationRegistry**: [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://monad-testnet.socialscan.io/address/0x8004b663056a597dffe9eccc1965a193b7388713)
 
+#### Morph Mainnet
+- **IdentityRegistry**: [`0x672c7c7A9562B8d1e31b1321C414b44e3C75a530`](https://explorer.morph.network/address/0x672c7c7A9562B8d1e31b1321C414b44e3C75a530)
+- **ReputationRegistry**: [`0x23AA2fD5D0268F0e523385B8eF26711eE820B4B5`](https://explorer.morph.network/address/0x23AA2fD5D0268F0e523385B8eF26711eE820B4B5)
+
+#### Morph Hoodi
+- **IdentityRegistry**: [`0x7DA4ec6D651416413f9bAE06258Ba61764f6ec28`](https://explorer-hoodi.morph.network/address/0x7DA4ec6D651416413f9bAE06258Ba61764f6ec28)
+- **ReputationRegistry**: [`0x3c3f5352Bc61D9242Dd08Bf2D7Bd1695057112D0`](https://explorer-hoodi.morph.network/address/0x3c3f5352Bc61D9242Dd08Bf2D7Bd1695057112D0)
+
 #### Optimism Mainnet
 - **IdentityRegistry**: [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://explorer.optimism.io/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432)
 - **ReputationRegistry**: [`0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`](https://explorer.optimism.io/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63)
