@@ -7,7 +7,9 @@
 This extension integrates Ethereum Attestation Service (EAS) into ERC-8004 to provide a standardized, composable trust layer for agents. It defines:
 
 1. **AgentURI → DID Address mapping** - Deterministic address derivation for EAS recipient indexing
-2. **Trust model integration** - How attestations complement the base ERC-8004 Reputation Registry
+2. **Off-chain attestation querying** - How off-chain clients discover and verify EAS attestations using DID Addresses
+3. **On-chain attestation indexing** - How the Reputation Registry serves as an on-chain index into EAS, enabling smart contract verifiers to discover and retrieve attestations by agentId
+4. **Trust model integration** - How attestations complement the base ERC-8004 Reputation Registry
 
 This extension enables permissionless, multi-party attestations while maintaining compatibility with existing EAS infrastructure and tooling.
 
@@ -19,6 +21,7 @@ The base ERC-8004 Reputation Registry provides on-chain feedback storage for age
 - **Greater expressiveness**: EAS supports an open-ended set of schemas, allowing different kinds of attestations (endorsements, certifications, audits, reviews, validations) without requiring a single fixed registry schema.
 - **Clearer semantics**: Schema UIDs and typed fields make the meaning of a trust signal explicit and machine-readable, improving interoperability across clients.
 - **Reuse of existing infrastructure**: EAS enables ERC-8004 deployments to leverage existing ecosystem contracts, explorers, and indexers rather than requiring separate bespoke infrastructure for each trust model.
+- **On-chain composability**: By indexing EAS attestation references in the Reputation Registry, smart contracts can discover and retrieve attestations without relying on off-chain indexers.
 
 This extension is intentionally additive: it does not replace the Reputation Registry, and clients remain free to combine Reputation Registry feedback with EAS-based attestations according to their own trust policies.
 
@@ -32,7 +35,7 @@ The following terms are used throughout this specification:
 | **Base Specification**   | The [base ERC-8004 specification document](https://github.com/erc-8004/erc-8004-contracts/blob/master/ERC8004SPEC.md).              |
 | **EAS**                  | [Ethereum Attestation Service](https://attest.sh).                                                                                  |
 | **Identity Registry**    | The ERC-721 contract that stores agent registrations as defined in the Base Specification.                                          |
-| **Reputation Registry**  | The ERC-721 contract that stores agent feedback as defined in the Base Specification.                                               |
+| **Reputation Registry**  | The contract that stores agent feedback as defined in the Base Specification.                                                        |
 | **Agent**                | A software service registered in the Identity Registry.                                                                             |
 | **Client**               | Software that queries the Extension to obtain information about an Agent. Examples include wallets, marketplaces, and other agents. |
 | **DID**                  | Decentralized Identifier as defined by the [W3C specification](https://www.w3.org/TR/did-core/#terminology).                        |
@@ -214,12 +217,17 @@ This dual-field approach prevents spoofing attacks where an attacker could creat
 
 This extension defines standard schemas for agent trust attestations. All schemas include the required `subject` field for DID verification.  These will be listed here in a future version of the Extension.
 
-## Attestation Querying
+
+## Off-Chain Attestation Discovery
+
+This section describes how off-chain clients (wallets, marketplaces, agent orchestrators, and other software running outside the EVM) discover and verify EAS attestations for agents. Off-chain clients have access to EAS GraphQL indexers and RPC endpoints, so they can query attestations directly using the DID Address as the EAS `recipient`.
+
+### Querying Flow
 
 Clients retrieve attestations about a DID using this flow:
 
 ```javascript
-// 1. Compute DID Address
+// 1. Compute DID Address from the agent's URI or DID
 const didAddress = didToAddress(did);
 
 // 2. Query EAS for attestations
@@ -244,9 +252,9 @@ for (const attestation of attestations) {
 
 Clients MAY index EAS attestations by DID Address using subgraphs or EAS GraphQL endpoints.
 
-Example query filters: recipient=<didAddress>, schema=<schemaUID>.”
+Example query filters: `recipient=<didAddress>`, `schema=<schemaUID>`.
 
-**Verification Requirements:**
+### Verification Requirements
 
 Clients MUST verify:
 1. `recipient` equals `didAddress(did)`
@@ -256,25 +264,165 @@ Clients MUST verify:
 5. Attester is trusted (per client's trust policy)
 
 
-## Future Direction: EAS v2 Migration Path
+## On-Chain Attestation Discovery
 
-The current v1 EAS Extension uses a DID address as the value of the subject field in order to remain compatible with the canonical EAS contract interface, which strictly defines subject as an address.
+This section describes how on-chain clients (smart contract verifiers, automated agents, and other contracts) discover and retrieve EAS attestations for agents. Unlike off-chain clients, smart contracts cannot query EAS GraphQL indexers or RPC endpoints. They need a way to discover attestation UIDs from an `agentId` using only on-chain state.
 
-This approach allows ERC-8004 identity registries and DIDs to participate in the EAS ecosystem today, but it is a transitional mechanism, not a permanent design choice. The DID address format is only a proxy representation of a DID or registry identifier—it was never intended to be a spendable or externally owned account, and implementations MUST treat it as a non-transferable identifier rather than a wallet address.
+The Reputation Registry's `giveFeedback()` function serves as this on-chain index. When an EAS attestation is created for an agent, the attestation creator (or any third party) also records a feedback entry in the Reputation Registry that references the attestation. This creates a fully on-chain discovery path from `agentId` to EAS attestation.
 
-In v2, the EAS extension will migrate away from this workaround toward a more flexible subject model that allows:
+### Reputation Registry Field Conventions
 
-- Native support for non-address subject types such as bytes32 (DID hashes), string (canonicalized DIDs), or structured identifiers (e.g., CAIP-19 asset references).
-- A unified attestation schema capable of expressing cross-chain and cross-namespace subjects.
-- Optional backward compatibility for v1 DID address subjects through SDK-level resolution.
+The Reputation Registry's `tag1` and `tag2` fields are stored in contract storage and are readable by smart contracts via `readFeedback()` and `readAllFeedback()`. This extension defines the following conventions for EAS-indexed feedback entries:
 
-This evolution is not a competing alternative to v1, but a planned migration path. The v1 approach ensures interoperability with existing EAS deployments. The v2 framework defines the long-term direction for EAS-compatible attestations across heterogeneous identifiers, registries, and chains.
+**`tag1`: Reputation Framework Identifier**
 
-Implementations integrating this specification should plan to:
+`tag1` MUST be set to `"eas"` for feedback entries that reference EAS attestations.
 
-- Continue supporting DID address subjects for legacy attestations.
-- Add support for resolving v2 subject types as they become available.
-- Transition indexers and SDKs to a unified query layer that transparently handles both v1 and v2 attestations.
+`tag1` serves as a framework discriminator. It identifies the format and semantics of `tag2`. Other reputation frameworks MAY define their own `tag1` values (e.g., future frameworks could use different identifiers). The value of `tag1` tells the verifier how to interpret `tag2`.
+
+**`tag2`: Attestation Reference**
+
+`tag2` encodes the EAS attestation UID and, optionally, the chain and contract location of the attestation. The format is:
+
+```
+<uid>[:<chainId>[:<easContractAddress>]]
+```
+
+Where:
+- `uid` (REQUIRED): The EAS attestation UID, a `bytes32` value encoded as a `0x`-prefixed, lowercase hex string (66 characters).
+- `chainId` (OPTIONAL): The EVM chain ID where the attestation exists, as a decimal string (e.g., `1` for Ethereum mainnet). If omitted, the attestation is assumed to be on the same chain as the Reputation Registry.
+- `easContractAddress` (OPTIONAL): The address of the EAS contract, as a `0x`-prefixed, lowercase hex string (42 characters). If omitted, the well-known official EAS contract address for the specified chain MUST be used. This field is only needed for unofficial or custom EAS deployments.
+
+`chainId` MUST be present if `easContractAddress` is present.
+
+**`tag2` Examples:**
+
+| Scenario                                    | `tag2` value                          |
+| ------------------------------------------- | ------------------------------------- |
+| Same chain, official EAS                    | `0xabc123...def`                      |
+| Different chain (Base), official EAS        | `0xabc123...def:8453`                 |
+| Different chain, unofficial EAS deployment  | `0xabc123...def:8453:0x5678...ef01`   |
+
+> **Note on CAIP-10 compatibility:** A future revision of this extension MAY adopt a CAIP-10-aligned format by prepending the `eip155:` namespace prefix before the chain ID (e.g., `0xabc123...def:eip155:8453:0x5678...ef01`). The current format omits the namespace prefix because EAS is exclusively an EVM technology, making the prefix redundant. However, there are advantages to including the namespace prefix as it would make the fields after `uid` CAIP-10 compliant.
+
+> **Note on gas efficiency:** The current `tag2` encoding uses a human-readable string format, which is convenient for off-chain tooling but not gas-efficient for on-chain parsing. A future revision MAY adopt a more compact encoding (e.g., ABI-encoded `bytes` or a packed binary format) to reduce storage and parsing costs for on-chain verifiers.
+
+### Recording an EAS Attestation in the Reputation Registry
+
+When an EAS attestation is created for an agent, the attestation creator (or any party) SHOULD also call `giveFeedback()` on the Reputation Registry to index the attestation on-chain:
+
+```solidity
+reputationRegistry.giveFeedback(
+    agentId,                    // The agent's Identity Registry token ID
+    value,                      // Feedback value (e.g., rating from the attestation)
+    valueDecimals,              // Decimal precision of the value
+    "eas",                      // tag1: framework identifier
+    tag2,                       // tag2: "<uid>" or "<uid>:<chainId>" or "<uid>:<chainId>:<contractAddress>"
+    endpoint,                   // OPTIONAL: agent endpoint reviewed (emitted, not stored)
+    feedbackURI,                // OPTIONAL: URI to off-chain feedback file (emitted, not stored)
+    feedbackHash                // OPTIONAL: hash of feedbackURI content (emitted, not stored)
+);
+```
+
+The `value` and `valueDecimals` fields SHOULD reflect the attestation's primary signal (e.g., a rating value from a user review schema). This ensures that `getSummary()` can aggregate EAS-backed feedback alongside native Reputation Registry feedback.
+
+### On-Chain Verification Flow
+
+A verifier contract can discover and retrieve EAS attestations for an agent using the following pattern:
+
+```solidity
+// Step 1: Verify registry linkage
+require(
+    reputationRegistry.getIdentityRegistry() == expectedIdentityRegistry,
+    "Registry mismatch"
+);
+
+// Step 2: Read EAS-tagged feedback entries
+(
+    address[] memory clients,
+    uint64[] memory feedbackIndexes,
+    int128[] memory values,
+    uint8[] memory valueDecimals,
+    string[] memory tag1s,
+    string[] memory tag2s,
+    bool[] memory revokedStatuses
+) = reputationRegistry.readAllFeedback(
+    agentId,
+    trustedReviewers,   // Filter to trusted reviewer addresses
+    "eas",              // tag1 filter: only EAS-backed entries
+    "",                 // tag2 filter: empty = no additional filtering
+    false               // exclude revoked
+);
+
+// Step 3: Derive the expected DID Address from the agent's URI
+string memory agentURI = identityRegistry.tokenURI(agentId);
+address expectedDIDAddress = EASIndex.uriToDIDAddress(agentURI);
+
+// Step 4: For each entry, parse tag2 and retrieve the attestation
+for (uint256 i = 0; i < clients.length; i++) {
+    EASIndex.AttestationRef memory ref = EASIndex.parseTag2(tag2s[i]);
+    
+    // Skip cross-chain attestations (cannot verify on-chain)
+    if (ref.chainId != 0 && ref.chainId != block.chainid) continue;
+    
+    // Retrieve the attestation from EAS
+    Attestation memory attestation = eas.getAttestation(ref.uid);
+    
+    // Skip revoked attestations
+    if (attestation.revocationTime != 0) continue;
+    
+    // Verify the attestation's recipient matches the agent's DID Address
+    if (attestation.recipient != expectedDIDAddress) continue;
+    
+    // Schema-specific verification
+    // (e.g., check expiration, decode rating, verify proof of payment, etc.)
+    // ...
+}
+```
+
+### EAS Index Library Interface
+
+This extension defines a Solidity library interface for parsing `tag2` and resolving EAS attestations. The implementation is deferred to a future version of this extension.
+
+```solidity
+/// @title EASIndex
+/// @notice Library for parsing Reputation Registry tag2 values that reference EAS attestations.
+library EASIndex {
+
+    struct AttestationRef {
+        bytes32 uid;              // EAS attestation UID
+        uint256 chainId;          // 0 = same chain as Reputation Registry
+        address easContract;      // address(0) = use well-known EAS contract
+    }
+
+    /// @notice Parse a tag2 string into its component parts.
+    /// @param tag2 The tag2 value from a Reputation Registry feedback entry where tag1 = "eas".
+    /// @return ref The parsed attestation reference.
+    function parseTag2(string memory tag2) internal pure returns (AttestationRef memory ref);
+
+    /// @notice Retrieve an EAS attestation from a parsed reference.
+    /// @dev Only works for same-chain attestations. Reverts if chainId != 0 and does not match block.chainid.
+    /// @param ref The parsed attestation reference.
+    /// @return attestation The full EAS Attestation struct.
+    function getAttestation(AttestationRef memory ref) internal view returns (Attestation memory attestation);
+
+    /// @notice Convert an HTTPS URI (e.g., agentURI) to a DID Address.
+    /// @dev Converts URI to did:web, canonicalizes, computes keccak256, and truncates to 20 bytes.
+    ///      Example: "https://agent.example.com/v1/chat" -> 0x...
+    /// @param uri The HTTPS URI to convert.
+    /// @return didAddress The 20-byte DID Address derived from the URI.
+    function uriToDIDAddress(string memory uri) internal pure returns (address didAddress);
+}
+```
+
+### Cross-Chain Limitations
+
+On-chain attestation retrieval via `EASIndex.getAttestation()` is only possible when the attestation resides on the same chain as the Reputation Registry. If `tag2` specifies a different `chainId`, the on-chain verifier cannot directly retrieve the attestation.
+
+For cross-chain scenarios, verifiers MUST either:
+- Trust the Reputation Registry feedback entry as a proxy signal (the `value` and `valueDecimals` fields reflect the attestation's content)
+- Use an off-chain relay or oracle to verify the attestation on the remote chain
+- Require attestations to be created on the same chain as the Reputation Registry
 
 ## Copyright
 
