@@ -478,7 +478,7 @@ const config: HardhatUserConfig = {
   solidity: {
     profiles: {
       default: {
-        version: "0.8.24",
+        version: "0.8.26",
         settings: {
           evmVersion: "shanghai",
           optimizer: {
@@ -490,7 +490,7 @@ const config: HardhatUserConfig = {
         },
       },
       production: {
-        version: "0.8.24",
+        version: "0.8.26",
         settings: {
           evmVersion: "shanghai",
           optimizer: {
@@ -514,13 +514,13 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: process.env.SEPOLIA_RPC_URL || "",
+      url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
     },
     mainnet: {
       type: "http",
       chainType: "l1",
-      url: process.env.MAINNET_RPC_URL || "",
+      url: process.env.MAINNET_RPC_URL || "https://eth.llamarpc.com",
       accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
     },
     baseSepolia: {

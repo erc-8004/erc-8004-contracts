@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -9,6 +9,16 @@ interface IIdentityRegistry {
 }
 
 contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+
+    error BadIdentity();
+    error TooManyDecimals();
+    error ValueTooLarge();
+    error SelfFeedbackNotAllowed();
+    error InvalidIndex();
+    error IndexOutOfBounds();
+    error AlreadyRevoked();
+    error EmptyURI();
+    error ClientAddressesRequired();
 
     int128 private constant MAX_ABS_VALUE = 1e38;
 
@@ -84,7 +94,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function initialize(address identityRegistry_) public reinitializer(2) onlyOwner {
-        require(identityRegistry_ != address(0), "bad identity");
+        require(identityRegistry_ != address(0), BadIdentity());
         _identityRegistry = identityRegistry_;
     }
 
@@ -102,12 +112,12 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata feedbackURI,
         bytes32 feedbackHash
     ) external {
-        require(valueDecimals <= 18, "too many decimals");
-        require(value >= -MAX_ABS_VALUE && value <= MAX_ABS_VALUE, "value too large");
+        require(valueDecimals <= 18, TooManyDecimals());
+        require(value >= -MAX_ABS_VALUE && value <= MAX_ABS_VALUE, ValueTooLarge());
 
         // SECURITY: Prevent self-feedback from owner and operators
         // Also reverts with ERC721NonexistentToken if agent doesn't exist
-        require(!IIdentityRegistry(_identityRegistry).isAuthorizedOrOwner(msg.sender, agentId), "Self-feedback not allowed");
+        require(!IIdentityRegistry(_identityRegistry).isAuthorizedOrOwner(msg.sender, agentId), SelfFeedbackNotAllowed());
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
@@ -133,10 +143,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external {
-        require(feedbackIndex > 0, "index must be > 0");
+        require(feedbackIndex > 0, InvalidIndex());
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex <= $._lastIndex[agentId][msg.sender], "index out of bounds");
-        require(!$._feedback[agentId][msg.sender][feedbackIndex].isRevoked, "Already revoked");
+        require(feedbackIndex <= $._lastIndex[agentId][msg.sender], IndexOutOfBounds());
+        require(!$._feedback[agentId][msg.sender][feedbackIndex].isRevoked, AlreadyRevoked());
 
         $._feedback[agentId][msg.sender][feedbackIndex].isRevoked = true;
         emit FeedbackRevoked(agentId, msg.sender, feedbackIndex);
@@ -149,10 +159,10 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string calldata responseURI,
         bytes32 responseHash
     ) external {
-        require(feedbackIndex > 0, "index must be > 0");
-        require(bytes(responseURI).length > 0, "Empty URI");
+        require(feedbackIndex > 0, InvalidIndex());
+        require(bytes(responseURI).length > 0, EmptyURI());
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], IndexOutOfBounds());
 
         // Track new responder
         if (!$._responderExists[agentId][clientAddress][feedbackIndex][msg.sender]) {
@@ -177,8 +187,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         returns (int128 value, uint8 valueDecimals, string memory tag1, string memory tag2, bool isRevoked)
     {
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        require(feedbackIndex > 0, "index must be > 0");
-        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], "index out of bounds");
+        require(feedbackIndex > 0, InvalidIndex());
+        require(feedbackIndex <= $._lastIndex[agentId][clientAddress], IndexOutOfBounds());
         Feedback storage f = $._feedback[agentId][clientAddress][feedbackIndex];
         return (f.value, f.valueDecimals, f.tag1, f.tag2, f.isRevoked);
     }
@@ -191,12 +201,7 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     ) external view returns (uint64 count, int128 summaryValue, uint8 summaryValueDecimals) {
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
-        address[] memory clientList;
-        if (clientAddresses.length > 0) {
-            clientList = clientAddresses;
-        } else {
-            revert("clientAddresses required");
-        }
+        require(clientAddresses.length > 0, ClientAddressesRequired());
 
         bytes32 emptyHash = keccak256(bytes(""));
         bytes32 tag1Hash = keccak256(bytes(tag1));
@@ -208,22 +213,20 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // Track frequency of each valueDecimals (0-18, anything >18 treated as 18)
         uint64[19] memory decimalCounts;
 
-        for (uint256 i; i < clientList.length; i++) {
-            uint64 lastIdx = $._lastIndex[agentId][clientList[i]];
+        for (uint256 i; i < clientAddresses.length; i++) {
+            uint64 lastIdx = $._lastIndex[agentId][clientAddresses[i]];
             for (uint64 j = 1; j <= lastIdx; j++) {
-                Feedback storage fb = $._feedback[agentId][clientList[i]][j];
+                Feedback storage fb = $._feedback[agentId][clientAddresses[i]][j];
                 if (fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
-                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
-                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash && tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash && tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 // Normalize to 18 decimals (WAD)
                 // `valueDecimals` is bounded to <= 18 on write; keep math signed.
                 int256 factor = int256(10 ** uint256(18 - fb.valueDecimals));
                 int256 normalized = fb.value * factor;
                 decimalCounts[fb.valueDecimals]++;
-
+                
                 sum += normalized;
                 count++;
             }
@@ -282,10 +285,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
-                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
-                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash && tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash && tag2Hash != keccak256(bytes(fb.tag2))) continue;
                 totalCount++;
             }
         }
@@ -306,10 +307,8 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             for (uint64 j = 1; j <= lastIdx; j++) {
                 Feedback storage fb = $._feedback[agentId][clientList[i]][j];
                 if (!includeRevoked && fb.isRevoked) continue;
-                if (emptyHash != tag1Hash &&
-                    tag1Hash != keccak256(bytes(fb.tag1))) continue;
-                if (emptyHash != tag2Hash &&
-                    tag2Hash != keccak256(bytes(fb.tag2))) continue;
+                if (emptyHash != tag1Hash && tag1Hash != keccak256(bytes(fb.tag1))) continue;
+                if (emptyHash != tag2Hash && tag2Hash != keccak256(bytes(fb.tag2))) continue;
 
                 clients[idx] = clientList[i];
                 feedbackIndexes[idx] = j;
