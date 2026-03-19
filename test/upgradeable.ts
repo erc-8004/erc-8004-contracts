@@ -319,7 +319,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
         await assert.rejects(
           minimalProxy.write.upgradeToAndCall([reputationImpl.address, reinitCalldata]),
-          /bad identity/,
+          /BadIdentity|bad identity/,
           "Should reject zero address for identityRegistry"
         );
       });
