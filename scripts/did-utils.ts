@@ -10,12 +10,12 @@
 import { keccak256, toBytes, getAddress, type Address } from 'viem'
 
 /**
- * Convert a URL to a did:web DID
- * @param url - The URL to convert
+ * Convert a URI to a did:web DID
+ * @param uri - The URI to convert
  * @returns DID in did:web format
  */
-export function urlToDid(url: string): string {
-  const urlObj = new URL(url)
+export function uriToDid(uri: string): string {
+  const urlObj = new URL(uri)
   const host = urlObj.hostname.toLowerCase()
   const path = urlObj.pathname.replace(/^\//, '').replace(/\/$/, '')
 
@@ -106,12 +106,12 @@ export function didToAddress(did: string): Address {
 }
 
 /**
- * Convert a URL directly to a DID Address
- * @param url - The URL to convert
+ * Convert a URI directly to a DID Address
+ * @param uri - The URI to convert
  * @returns Checksummed Ethereum address for use as EAS recipient
  */
-export function urlToDidAddress(url: string): Address {
-  const did = urlToDid(url)
+export function uriToDidAddress(uri: string): Address {
+  const did = uriToDid(uri)
   return didToAddress(did)
 }
 
