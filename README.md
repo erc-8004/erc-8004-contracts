@@ -1,5 +1,7 @@
 # ERC-8004: Trustless Agents
 
+> **Note (TRON):** For TRON deployments, M2M now uses [Bank of AI's TRC-8004 contracts](https://github.com/BofAI/contracts). Selected improvements will be proposed upstream. EVM deployments in this repo remain active.
+
 Implementation of the ERC-8004 protocol for agent discovery and trust through reputation and validation.
 
 ### Contract Addresses
