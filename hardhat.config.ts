@@ -473,6 +473,24 @@ const config: HardhatUserConfig = {
           apiUrl: "https://testnet.arcscan.app/api",
         }
       }
+    },
+    6913: {
+      name: "Billions Testnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://explorer-testnet.billions.network",
+          apiUrl: "https://explorer-testnet.billions.network/api/",
+        },
+      },
+    },
+    45056: {
+      name: "Billions",
+      blockExplorers: {
+        blockscout: {
+          url: "https://explorer.billions.network",
+          apiUrl: "https://explorer.billions.network/api/",
+        },
+      },
     }
   },
   solidity: {
@@ -792,6 +810,18 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
+    },
+    billionsTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.BILLIONS_TESTNET_RPC_URL || "https://rpc-testnet.billions.network",
+      accounts: process.env.BILLIONS_TESTNET_PRIVATE_KEY ? [process.env.BILLIONS_TESTNET_PRIVATE_KEY] : [],
+    },
+    billions: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.BILLIONS_RPC_URL || "https://rpc-mainnet.billions.network",
+      accounts: process.env.BILLIONS_PRIVATE_KEY ? [process.env.BILLIONS_PRIVATE_KEY] : [],
     },
   },
 };
