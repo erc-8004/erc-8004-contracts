@@ -5,10 +5,10 @@ const ERC8004Module = buildModule("ERC8004Module", (m) => {
   const identityRegistry = m.contract("IdentityRegistry");
 
   // Deploy ReputationRegistry with IdentityRegistry address
-  const reputationRegistry = m.contract("ReputationRegistry", [identityRegistry]);
+  const reputationRegistryry = m.contract("ReputationRegistry", [identityRegistry]);
 
   // Deploy ValidationRegistry with IdentityRegistry address
-  const validationRegistry = m.contract("ValidationRegistry", [identityRegistry]);
+  const validationRegistryry = m.contract("ValidationRegistry", [identityRegistry]);
 
   return {
     identityRegistry,

@@ -4,7 +4,7 @@ import { defineChain } from "viem";
  * Custom chain definitions for chains not yet in viem's built-in list.
  * Key must match the network name in hardhat.config.ts.
  */
-export const customChains: Record<string, ReturnType<typeof defineChain>> = {
+export export customChains: Record<string, ReturnType<typeof defineChain>> = {
   xlayerTestnet: defineChain({
     id: 1952,
     name: "XLayer Testnet",

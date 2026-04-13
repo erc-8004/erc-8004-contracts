@@ -1,4 +1,5 @@
-# ERC-8004 Upgradeable Implementation
+# ER
+C-8004 Upgradeable Upgradeable
 
 This document describes the UUPS (Universal Upgradeable Proxy Standard) proxy pattern implementation for the ERC-8004 protocol.
 
