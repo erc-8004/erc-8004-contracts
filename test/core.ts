@@ -1962,4 +1962,266 @@ describe("ERC8004 Registries", async function () {
       assert.equal(status[2], 67);
     });
   });
+
+  describe("TEE Key Registry", async function () {
+    async function deployMockVerifier(shouldPass: boolean, identifiers: `0x${string}`[]) {
+      const verifier = await viem.deployContract("MockTEEVerifier", [shouldPass]);
+      if (identifiers.length > 0) {
+        await verifier.write.setResult([shouldPass, identifiers]);
+      }
+      return verifier;
+    }
+
+    it("Should add and remove verifiers (owner only)", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, nonOwner] = await viem.getWalletClients();
+
+      const verifier = await deployMockVerifier(true, []);
+
+      // Owner can add verifier
+      await validationRegistry.write.addVerifier([verifier.address]);
+      assert.equal(await validationRegistry.read.isVerifier([verifier.address]), true);
+
+      // Non-owner cannot add verifier
+      await assert.rejects(
+        validationRegistry.write.addVerifier([verifier.address], { account: nonOwner.account })
+      );
+
+      // Owner can remove verifier
+      await validationRegistry.write.removeVerifier([verifier.address]);
+      assert.equal(await validationRegistry.read.isVerifier([verifier.address]), false);
+    });
+
+    it("Should add a key with valid proof (permissionless)", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const identifier1 = keccak256(toHex("enclave-hash"));
+      const identifier2 = keccak256(toHex("signer-hash"));
+      const verifier = await deployMockVerifier(true, [identifier1, identifier2]);
+
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      const proof = toHex("fake-attestation-quote");
+
+      // TEE registers its own key (permissionless — any account can call)
+      await validationRegistry.write.addKey(
+        [proof, tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Verify key was stored
+      const key = await validationRegistry.read.getKey([tee.account.address]);
+      assert.equal(key[0], true); // valid
+      assert.equal(key[1].length, 2); // identifiers
+      assert.equal(key[1][0], identifier1);
+      assert.equal(key[1][1], identifier2);
+      assert.equal(key[2], expiration);
+      assert.equal(key[3].toLowerCase(), verifier.address.toLowerCase());
+    });
+
+    it("Should reject addKey with unapproved verifier", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const verifier = await deployMockVerifier(true, []);
+
+      // Don't add verifier to approved list
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      await assert.rejects(
+        validationRegistry.write.addKey(
+          [toHex("proof"), tee.account.address, expiration, verifier.address],
+          { account: tee.account }
+        )
+      );
+    });
+
+    it("Should reject addKey when verifier returns false", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const verifier = await deployMockVerifier(false, []);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      await assert.rejects(
+        validationRegistry.write.addKey(
+          [toHex("bad-proof"), tee.account.address, expiration, verifier.address],
+          { account: tee.account }
+        )
+      );
+    });
+
+    it("Should return invalid for expired keys", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const identifier = keccak256(toHex("enclave"));
+      const verifier = await deployMockVerifier(true, [identifier]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      // Set expiration in the past
+      const expiration = BigInt(1);
+      await validationRegistry.write.addKey(
+        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Key should be invalid (expired)
+      const key = await validationRegistry.read.getKey([tee.account.address]);
+      assert.equal(key[0], false);
+    });
+
+    it("Should support reverse lookup by identifier", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const identifier = keccak256(toHex("enclave-measurement"));
+      const verifier = await deployMockVerifier(true, [identifier]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      await validationRegistry.write.addKey(
+        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Reverse lookup
+      const pubKey = await validationRegistry.read.getKeyByIdentifier([identifier]);
+      assert.equal(pubKey.toLowerCase(), tee.account.address.toLowerCase());
+    });
+
+    it("Should link key to agent and appear in getSummary", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      // Register agent
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Set up verifier and add key
+      const identifier = keccak256(toHex("enclave"));
+      const verifier = await deployMockVerifier(true, [identifier]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      await validationRegistry.write.addKey(
+        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Agent owner links key to their agent
+      await validationRegistry.write.linkKey([tee.account.address, agentId]);
+
+      // Key should appear in agent validations
+      const validations = await validationRegistry.read.getAgentValidations([agentId]);
+      assert.equal(validations.length, 1);
+
+      // Should appear in getSummary with tag "tee"
+      const summary = await validationRegistry.read.getSummary([agentId, [], "tee"]);
+      assert.equal(summary[0], 1n); // count
+      assert.equal(summary[1], 100); // avgResponse (TEE = 100)
+    });
+
+    it("Should reject linkKey from non-agent-owner", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee, attacker] = await viem.getWalletClients();
+
+      // Register agent (owned by owner)
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Add key
+      const verifier = await deployMockVerifier(true, [keccak256(toHex("e"))]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+      await validationRegistry.write.addKey(
+        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Attacker cannot link key to agent they don't own
+      await assert.rejects(
+        validationRegistry.write.linkKey(
+          [tee.account.address, agentId],
+          { account: attacker.account }
+        )
+      );
+    });
+
+    it("Should reject linkKey for expired key", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const verifier = await deployMockVerifier(true, [keccak256(toHex("e"))]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      // Expired key
+      await validationRegistry.write.addKey(
+        [toHex("proof"), tee.account.address, BigInt(1), verifier.address],
+        { account: tee.account }
+      );
+
+      await assert.rejects(
+        validationRegistry.write.linkKey([tee.account.address, agentId])
+      );
+    });
+
+    it("Should overwrite key and clear old reverse lookups", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const validationRegistry = await deployValidationRegistryProxy(identityRegistry.address);
+      const [owner, tee] = await viem.getWalletClients();
+
+      const id1 = keccak256(toHex("old-enclave"));
+      const id2 = keccak256(toHex("new-enclave"));
+
+      const verifier = await deployMockVerifier(true, [id1]);
+      await validationRegistry.write.addVerifier([verifier.address]);
+
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // First addKey
+      await validationRegistry.write.addKey(
+        [toHex("proof1"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+      assert.equal(
+        (await validationRegistry.read.getKeyByIdentifier([id1])).toLowerCase(),
+        tee.account.address.toLowerCase()
+      );
+
+      // Update verifier to return new identifier
+      await verifier.write.setResult([true, [id2]]);
+
+      // Overwrite with new key
+      await validationRegistry.write.addKey(
+        [toHex("proof2"), tee.account.address, expiration, verifier.address],
+        { account: tee.account }
+      );
+
+      // Old identifier should be cleared
+      assert.equal(
+        await validationRegistry.read.getKeyByIdentifier([id1]),
+        zeroAddress
+      );
+      // New identifier should point to key
+      assert.equal(
+        (await validationRegistry.read.getKeyByIdentifier([id2])).toLowerCase(),
+        tee.account.address.toLowerCase()
+      );
+    });
+  });
 });
