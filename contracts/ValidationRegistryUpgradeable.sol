@@ -10,7 +10,12 @@ interface IIdentityRegistry {
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
+interface ITEEVerifier {
+    function verify(bytes calldata proof, address pubKey) external view returns (bool success, bytes32[] memory identifiers);
+}
+
 contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+    // --- Events: general validation ---
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,
@@ -28,6 +33,13 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         string tag
     );
 
+    // --- Events: TEE ---
+    event KeyAdded(address indexed pubKey, bytes32 indexed keyHash, bytes32[] identifiers, address verifier, uint256 expiration);
+    event KeyLinked(address indexed pubKey, uint256 indexed agentId, bytes32 indexed keyHash);
+    event VerifierAdded(address indexed verifier);
+    event VerifierRemoved(address indexed verifier);
+
+    // --- Structs ---
     struct ValidationStatus {
         address validatorAddress;
         uint256 agentId;
@@ -38,16 +50,21 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bool hasResponse;
     }
 
+    struct KeyInfo {
+        bytes32[] identifiers;
+        uint256 expiration;
+        address verifier;
+    }
+
     /// @dev Identity registry address stored at slot 0 (matches MinimalUUPS)
     address private _identityRegistry;
 
+    // --- Storage: general validation (ERC-7201) ---
+
     /// @custom:storage-location erc7201:erc8004.validation.registry
     struct ValidationRegistryStorage {
-        // requestHash => validation status
         mapping(bytes32 => ValidationStatus) validations;
-        // agentId => list of requestHashes
         mapping(uint256 => bytes32[]) _agentValidations;
-        // validatorAddress => list of requestHashes
         mapping(address => bytes32[]) _validatorRequests;
     }
 
@@ -60,6 +77,27 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             $.slot := VALIDATION_REGISTRY_STORAGE_LOCATION
         }
     }
+
+    // --- Storage: TEE (ERC-7201) ---
+
+    /// @custom:storage-location erc7201:erc8004.tee.registry
+    struct TEERegistryStorage {
+        mapping(address => KeyInfo) keys;
+        mapping(address => bool) verifiers;
+        mapping(bytes32 => address) identifierToKey;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("erc8004.tee.registry")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant TEE_REGISTRY_STORAGE_LOCATION =
+        0xd4eaa27091cfd7f09158b30bf0b4be75baf3d13e418ec8691cf1e12ade5e7f00;
+
+    function _getTEERegistryStorage() private pure returns (TEERegistryStorage storage $) {
+        assembly {
+            $.slot := TEE_REGISTRY_STORAGE_LOCATION
+        }
+    }
+
+    // --- Init ---
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,6 +113,10 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         return _identityRegistry;
     }
 
+    // =========================================================================
+    // GENERAL VALIDATION
+    // =========================================================================
+
     function validationRequest(
         address validatorAddress,
         uint256 agentId,
@@ -85,15 +127,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         require(validatorAddress != address(0), "bad validator");
         require($.validations[requestHash].validatorAddress == address(0), "exists");
 
-        // Check permission: caller must be owner or approved operator
-        IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
-        address owner = registry.ownerOf(agentId);
-        require(
-            msg.sender == owner ||
-            registry.isApprovedForAll(owner, msg.sender) ||
-            registry.getApproved(agentId) == msg.sender,
-            "Not authorized"
-        );
+        _requireAgentAuth(agentId);
 
         $.validations[requestHash] = ValidationStatus({
             validatorAddress: validatorAddress,
@@ -105,7 +139,6 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
             hasResponse: false
         });
 
-        // Track for lookups
         $._agentValidations[agentId].push(requestHash);
         $._validatorRequests[validatorAddress].push(requestHash);
 
@@ -156,7 +189,6 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         for (uint256 i; i < requestHashes.length; i++) {
             ValidationStatus storage s = $.validations[requestHashes[i]];
 
-            // Filter by validator if specified
             bool matchValidator = (validatorAddresses.length == 0);
             if (!matchValidator) {
                 for (uint256 j; j < validatorAddresses.length; j++) {
@@ -167,7 +199,6 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
                 }
             }
 
-            // Filter by tag (empty string means no filter)
             bool matchTag = (bytes(tag).length == 0) || (keccak256(bytes(s.tag)) == keccak256(bytes(tag)));
 
             if (matchValidator && matchTag && s.hasResponse) {
@@ -189,9 +220,130 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         return $._validatorRequests[validatorAddress];
     }
 
+    // =========================================================================
+    // TEE KEY REGISTRY
+    // =========================================================================
+
+    // --- Verifier management (owner only) ---
+
+    function addVerifier(address v) external onlyOwner {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        $.verifiers[v] = true;
+        emit VerifierAdded(v);
+    }
+
+    function removeVerifier(address v) external onlyOwner {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        $.verifiers[v] = false;
+        emit VerifierRemoved(v);
+    }
+
+    function isVerifier(address v) external view returns (bool) {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        return $.verifiers[v];
+    }
+
+    // --- Key registration (permissionless) ---
+
+    function addKey(bytes calldata proof, address pubKey, uint256 expiration, address verifier) external returns (bytes32 keyHash) {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        require($.verifiers[verifier], "unapproved verifier");
+
+        (bool success, bytes32[] memory identifiers) = ITEEVerifier(verifier).verify(proof, pubKey);
+        require(success, "invalid TEE proof");
+
+        // Clear old reverse lookups if overwriting
+        KeyInfo storage existing = $.keys[pubKey];
+        for (uint256 i; i < existing.identifiers.length; i++) {
+            delete $.identifierToKey[existing.identifiers[i]];
+        }
+
+        // Store key info
+        $.keys[pubKey] = KeyInfo(identifiers, expiration, verifier);
+
+        // Set reverse lookups
+        for (uint256 i; i < identifiers.length; i++) {
+            $.identifierToKey[identifiers[i]] = pubKey;
+        }
+
+        keyHash = keccak256(abi.encodePacked(pubKey, verifier));
+        emit KeyAdded(pubKey, keyHash, identifiers, verifier, expiration);
+    }
+
+    // --- Link key to agent (agent-authorized) ---
+
+    function linkKey(address pubKey, uint256 agentId) external {
+        TEERegistryStorage storage tee = _getTEERegistryStorage();
+        ValidationRegistryStorage storage val = _getValidationRegistryStorage();
+
+        // Key must exist and not be expired
+        KeyInfo storage k = tee.keys[pubKey];
+        require(k.verifier != address(0), "key not found");
+        require(k.expiration > block.timestamp, "key expired");
+
+        // Caller must be authorized for this agent
+        _requireAgentAuth(agentId);
+
+        // Deterministic hash for this key+agent link
+        bytes32 keyHash = keccak256(abi.encodePacked(pubKey, k.verifier));
+
+        // Write into validation storage so it shows up in getSummary/getAgentValidations
+        require(val.validations[keyHash].validatorAddress == address(0), "already linked");
+
+        val.validations[keyHash] = ValidationStatus({
+            validatorAddress: k.verifier,
+            agentId: agentId,
+            response: 100,
+            responseHash: keccak256(abi.encodePacked(k.identifiers)),
+            tag: "tee",
+            lastUpdate: block.timestamp,
+            hasResponse: true
+        });
+
+        val._agentValidations[agentId].push(keyHash);
+        val._validatorRequests[k.verifier].push(keyHash);
+
+        emit KeyLinked(pubKey, agentId, keyHash);
+    }
+
+    // --- Read keys ---
+
+    function getKey(address pubKey) external view returns (bool valid, bytes32[] memory identifiers, uint256 expiration, address verifier) {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        KeyInfo storage k = $.keys[pubKey];
+        if (k.verifier == address(0) || k.expiration <= block.timestamp) {
+            return (false, new bytes32[](0), 0, address(0));
+        }
+        return (true, k.identifiers, k.expiration, k.verifier);
+    }
+
+    function getKeyByIdentifier(bytes32 identifier) external view returns (address pubKey) {
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        return $.identifierToKey[identifier];
+    }
+
+    // =========================================================================
+    // INTERNAL
+    // =========================================================================
+
+    function _requireAgentAuth(uint256 agentId) private view {
+        IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
+        address agentOwner = registry.ownerOf(agentId);
+        require(
+            msg.sender == agentOwner ||
+            registry.isApprovedForAll(agentOwner, msg.sender) ||
+            registry.getApproved(agentId) == msg.sender,
+            "Not authorized"
+        );
+    }
+
+    // =========================================================================
+    // UPGRADE
+    // =========================================================================
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function getVersion() external pure returns (string memory) {
-        return "2.0.0";
+        return "3.0.0";
     }
 }
