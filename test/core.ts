@@ -2009,7 +2009,7 @@ describe("ERC8004 Registries", async function () {
 
       // TEE registers its own key (permissionless — any account can call)
       await validationRegistry.write.addKey(
-        [proof, tee.account.address, expiration, verifier.address],
+        [proof, tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 
@@ -2034,7 +2034,7 @@ describe("ERC8004 Registries", async function () {
       const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
       await assert.rejects(
         validationRegistry.write.addKey(
-          [toHex("proof"), tee.account.address, expiration, verifier.address],
+          [toHex("proof"), tee.account.address, expiration, verifier.address, []],
           { account: tee.account }
         )
       );
@@ -2051,7 +2051,7 @@ describe("ERC8004 Registries", async function () {
       const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
       await assert.rejects(
         validationRegistry.write.addKey(
-          [toHex("bad-proof"), tee.account.address, expiration, verifier.address],
+          [toHex("bad-proof"), tee.account.address, expiration, verifier.address, []],
           { account: tee.account }
         )
       );
@@ -2069,7 +2069,7 @@ describe("ERC8004 Registries", async function () {
       // Set expiration in the past
       const expiration = BigInt(1);
       await validationRegistry.write.addKey(
-        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        [toHex("proof"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 
@@ -2089,7 +2089,7 @@ describe("ERC8004 Registries", async function () {
 
       const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
       await validationRegistry.write.addKey(
-        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        [toHex("proof"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 
@@ -2114,7 +2114,7 @@ describe("ERC8004 Registries", async function () {
 
       const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
       await validationRegistry.write.addKey(
-        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        [toHex("proof"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 
@@ -2145,7 +2145,7 @@ describe("ERC8004 Registries", async function () {
       await validationRegistry.write.addVerifier([verifier.address]);
       const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
       await validationRegistry.write.addKey(
-        [toHex("proof"), tee.account.address, expiration, verifier.address],
+        [toHex("proof"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 
@@ -2171,7 +2171,7 @@ describe("ERC8004 Registries", async function () {
 
       // Expired key
       await validationRegistry.write.addKey(
-        [toHex("proof"), tee.account.address, BigInt(1), verifier.address],
+        [toHex("proof"), tee.account.address, BigInt(1), verifier.address, []],
         { account: tee.account }
       );
 
@@ -2195,7 +2195,7 @@ describe("ERC8004 Registries", async function () {
 
       // First addKey
       await validationRegistry.write.addKey(
-        [toHex("proof1"), tee.account.address, expiration, verifier.address],
+        [toHex("proof1"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
       assert.equal(
@@ -2208,7 +2208,7 @@ describe("ERC8004 Registries", async function () {
 
       // Overwrite with new key
       await validationRegistry.write.addKey(
-        [toHex("proof2"), tee.account.address, expiration, verifier.address],
+        [toHex("proof2"), tee.account.address, expiration, verifier.address, []],
         { account: tee.account }
       );
 

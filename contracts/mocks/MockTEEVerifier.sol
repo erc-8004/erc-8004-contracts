@@ -17,7 +17,7 @@ contract MockTEEVerifier {
         }
     }
 
-    function verify(bytes calldata, address) external view returns (bool success, bytes32[] memory identifiers) {
+    function verify(bytes calldata, bytes[] calldata) external view returns (bool success, bytes32[] memory identifiers) {
         return (shouldPass, returnIdentifiers);
     }
 }

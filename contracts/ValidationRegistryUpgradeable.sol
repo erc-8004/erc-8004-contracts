@@ -11,7 +11,7 @@ interface IIdentityRegistry {
 }
 
 interface ITEEVerifier {
-    function verify(bytes calldata proof, address pubKey) external view returns (bool success, bytes32[] memory identifiers);
+    function verify(bytes calldata proof, bytes[] calldata inputs) external view returns (bool success, bytes32[] memory identifiers);
 }
 
 contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
@@ -245,11 +245,11 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     // --- Key registration (permissionless) ---
 
-    function addKey(bytes calldata proof, address pubKey, uint256 expiration, address verifier) external returns (bytes32 keyHash) {
+    function addKey(bytes calldata proof, address pubKey, uint256 expiration, address verifier, bytes[] calldata inputs) external returns (bytes32 keyHash) {
         TEERegistryStorage storage $ = _getTEERegistryStorage();
         require($.verifiers[verifier], "unapproved verifier");
 
-        (bool success, bytes32[] memory identifiers) = ITEEVerifier(verifier).verify(proof, pubKey);
+        (bool success, bytes32[] memory identifiers) = ITEEVerifier(verifier).verify(proof, inputs);
         require(success, "invalid TEE proof");
 
         // Clear old reverse lookups if overwriting
