@@ -645,6 +645,221 @@ describe("ERC8004 Registries", async function () {
       const metadataWallet = await identityRegistry.read.getMetadata([agentId, "agentWallet"]);
       assert.equal(metadataWallet, "0x");
     });
+
+    // =========================================================================
+    // Reverse Lookup
+    // =========================================================================
+
+    it("Should populate reverse lookup on register", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // agentWallet reverse lookup should return this agent
+      const agents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(agents.length, 1);
+      assert.equal(agents[0], agentId);
+    });
+
+    it("Should update reverse lookup on setMetadata", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const value = toHex("some-service");
+      await identityRegistry.write.setMetadata([agentId, "serviceType", value]);
+
+      const agents = await identityRegistry.read.agentByMetadata(["serviceType", value]);
+      assert.equal(agents.length, 1);
+      assert.equal(agents[0], agentId);
+    });
+
+    it("Should remove old value from reverse lookup on setMetadata update", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const oldValue = toHex("old-service");
+      const newValue = toHex("new-service");
+
+      await identityRegistry.write.setMetadata([agentId, "serviceType", oldValue]);
+      await identityRegistry.write.setMetadata([agentId, "serviceType", newValue]);
+
+      // Old value should be gone
+      const oldAgents = await identityRegistry.read.agentByMetadata(["serviceType", oldValue]);
+      assert.equal(oldAgents.length, 0);
+
+      // New value should be present
+      const newAgents = await identityRegistry.read.agentByMetadata(["serviceType", newValue]);
+      assert.equal(newAgents.length, 1);
+      assert.equal(newAgents[0], agentId);
+    });
+
+    it("Should clear reverse lookup on unsetAgentWallet", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Reverse lookup should exist
+      let agents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(agents.length, 1);
+
+      // Unset wallet
+      await identityRegistry.write.unsetAgentWallet([agentId]);
+
+      // Reverse lookup should be cleared
+      agents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(agents.length, 0);
+    });
+
+    it("Should clear reverse lookup on transfer", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner, newOwner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Reverse lookup exists before transfer
+      let agents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(agents.length, 1);
+
+      // Transfer
+      await identityRegistry.write.transferFrom(
+        [owner.account.address, newOwner.account.address, agentId],
+        { account: owner.account }
+      );
+
+      // Reverse lookup should be cleared
+      agents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(agents.length, 0);
+    });
+
+    it("Should update reverse lookup on setAgentWallet", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner, newWalletSigner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      const signature = await newWalletSigner.signTypedData({
+        account: newWalletSigner.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId,
+          newWallet: newWalletSigner.account.address,
+          owner: owner.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId, newWalletSigner.account.address, deadline, signature],
+        { account: owner.account }
+      );
+
+      // Old wallet should be cleared from reverse lookup
+      const oldAgents = await identityRegistry.read.agentByMetadata(["agentWallet", owner.account.address]);
+      assert.equal(oldAgents.length, 0);
+
+      // New wallet should be in reverse lookup
+      const newAgents = await identityRegistry.read.agentByMetadata(["agentWallet", newWalletSigner.account.address]);
+      assert.equal(newAgents.length, 1);
+      assert.equal(newAgents[0], agentId);
+    });
+
+    it("Should return multiple agents for same metadata value", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
+      const txHash2 = await identityRegistry.write.register(["ipfs://agent2"]);
+      const agentId1 = await getAgentIdFromRegistration(txHash1);
+      const agentId2 = await getAgentIdFromRegistration(txHash2);
+
+      const value = toHex("shared-trait");
+      await identityRegistry.write.setMetadata([agentId1, "trait", value]);
+      await identityRegistry.write.setMetadata([agentId2, "trait", value]);
+
+      const agents = await identityRegistry.read.agentByMetadata(["trait", value]);
+      assert.equal(agents.length, 2);
+      assert.ok(agents.includes(agentId1));
+      assert.ok(agents.includes(agentId2));
+    });
+
+    it("Should allow permissionless setReverseLookup backfill", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner, backfiller] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      // Set some metadata
+      const value = toHex("my-service");
+      await identityRegistry.write.setMetadata([agentId, "service", value]);
+
+      // Anyone can backfill the reverse lookup (if forward relation matches)
+      await identityRegistry.write.setReverseLookup(
+        [agentId, "service", value],
+        { account: backfiller.account }
+      );
+    });
+
+    it("Should reject setReverseLookup with mismatched value", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      await assert.rejects(
+        identityRegistry.write.setReverseLookup([agentId, "service", toHex("wrong-value")])
+      );
+    });
+
+    it("Should resolve getOwnerFromAgentWallet", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent"]);
+
+      const resolvedOwner = await identityRegistry.read.getOwnerFromAgentWallet([owner.account.address]);
+      assert.equal(resolvedOwner.toLowerCase(), owner.account.address.toLowerCase());
+    });
+
+    it("Should revert getOwnerFromAgentWallet for unknown wallet", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner, unknown] = await viem.getWalletClients();
+
+      await assert.rejects(
+        identityRegistry.read.getOwnerFromAgentWallet([unknown.account.address])
+      );
+    });
   });
 
   describe("ReputationRegistry", async function () {
