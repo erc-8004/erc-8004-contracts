@@ -26,10 +26,6 @@ contract IdentityRegistryUpgradeable is
         mapping(uint256 => mapping(string => bytes)) _metadata;
         // Reverse lookup: metadataKey => keccak256(metadataValue) => List<agentId>
         mapping(string => mapping(bytes32 => uint256[])) _reverseLookup;
-        // For agentWallet "1 or fail": wallet => owner
-        mapping(address => address) _agentWalletOwner;
-        // True if multiple different owners have agents registered to this wallet
-        mapping(address => bool) _agentWalletMultipleOwners;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -46,7 +42,6 @@ contract IdentityRegistryUpgradeable is
     event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
     event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy);
     event ReverseLookupSet(uint256 indexed agentId, string indexed metadataKey, bytes metadataValue, address indexed by);
-    event AgentWalletOwnerConflict(address indexed wallet, address ownerA, address ownerB);
 
     bytes32 private constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
@@ -67,8 +62,6 @@ contract IdentityRegistryUpgradeable is
 
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        _enforceAgentWalletUnique(msg.sender, 0);
-        $._agentWalletOwner[msg.sender] = msg.sender;
         agentId = $._lastId++;
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
@@ -79,8 +72,6 @@ contract IdentityRegistryUpgradeable is
 
     function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        _enforceAgentWalletUnique(msg.sender, 0);
-        $._agentWalletOwner[msg.sender] = msg.sender;
         agentId = $._lastId++;
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
@@ -92,8 +83,6 @@ contract IdentityRegistryUpgradeable is
 
     function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        _enforceAgentWalletUnique(msg.sender, 0);
-        $._agentWalletOwner[msg.sender] = msg.sender;
         agentId = $._lastId++;
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
@@ -190,16 +179,7 @@ contract IdentityRegistryUpgradeable is
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
 
-        _enforceAgentWalletUnique(newWallet, agentId);
-
-        // Clear old wallet from reverse lookup
-        bytes memory oldWallet = $._metadata[agentId]["agentWallet"];
-        if (oldWallet.length > 0) {
-            _removeFromReverseLookup(agentId, "agentWallet", oldWallet);
-        }
-
-        // Update owner tracking
-        $._agentWalletOwner[newWallet] = owner;
+        _clearAgentWallet(agentId);
 
         $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);
         _addToReverseLookup(agentId, "agentWallet", abi.encodePacked(newWallet));
@@ -215,17 +195,7 @@ contract IdentityRegistryUpgradeable is
             "Not authorized"
         );
 
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-
-        // Clear from reverse lookup and owner tracking
-        bytes memory oldWallet = $._metadata[agentId]["agentWallet"];
-        if (oldWallet.length > 0) {
-            _removeFromReverseLookup(agentId, "agentWallet", oldWallet);
-            $._agentWalletOwner[address(bytes20(oldWallet))] = address(0);
-        }
-
-        $._metadata[agentId]["agentWallet"] = "";
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", "");
+        _clearAgentWallet(agentId);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -240,14 +210,7 @@ contract IdentityRegistryUpgradeable is
 
         // If this is a transfer (not mint), clear agentWallet BEFORE external call
         if (from != address(0) && to != address(0)) {
-            IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-            bytes memory oldWallet = $._metadata[tokenId]["agentWallet"];
-            if (oldWallet.length > 0) {
-                _removeFromReverseLookup(tokenId, "agentWallet", oldWallet);
-                $._agentWalletOwner[address(bytes20(oldWallet))] = address(0);
-            }
-            $._metadata[tokenId]["agentWallet"] = "";
-            emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
+            _clearAgentWallet(tokenId);
         }
 
         return super._update(to, tokenId, auth);
@@ -297,28 +260,31 @@ contract IdentityRegistryUpgradeable is
         }
         _addToArray($._reverseLookup[metadataKey][keccak256(metadataValue)], agentId);
 
-        // For agentWallet specifically: update owner tracking
-        if (keccak256(bytes(metadataKey)) == RESERVED_AGENT_WALLET_KEY_HASH) {
-            address owner = _ownerOf(agentId);
-            address wallet = address(bytes20(metadataValue));
-            _setAgentWalletOwner(wallet, owner);
-        }
-
         emit ReverseLookupSet(agentId, metadataKey, metadataValue, msg.sender);
     }
 
-    /// @notice Get the owner of an agent wallet. Reverts if multiple different owners
-    /// have agents with this wallet (Chainlink's "1 or fail" requirement).
+    /// @notice Get the owner of the first agent registered to this wallet.
     function getOwnerFromAgentWallet(address wallet) external view returns (address owner) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        require(!$._agentWalletMultipleOwners[wallet], "multiple owners");
-        owner = $._agentWalletOwner[wallet];
-        require(owner != address(0), "wallet not found");
+        bytes32 valueHash = keccak256(abi.encodePacked(wallet));
+        uint256[] storage agents = $._reverseLookup["agentWallet"][valueHash];
+        require(agents.length > 0, "wallet not found");
+        return ownerOf(agents[0]);
     }
 
     // =========================================================================
     // INTERNAL REVERSE LOOKUP HELPERS
     // =========================================================================
+
+    function _clearAgentWallet(uint256 agentId) private {
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        bytes memory oldWallet = $._metadata[agentId]["agentWallet"];
+        if (oldWallet.length > 0) {
+            _removeFromReverseLookup(agentId, "agentWallet", oldWallet);
+        }
+        $._metadata[agentId]["agentWallet"] = "";
+        emit MetadataSet(agentId, "agentWallet", "agentWallet", "");
+    }
 
     function _addToReverseLookup(uint256 agentId, string memory key, bytes memory value) private {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
@@ -352,38 +318,6 @@ contract IdentityRegistryUpgradeable is
             if (arr[i] == value) return; // no duplicates
         }
         arr.push(value);
-    }
-
-    function _enforceAgentWalletUnique(address wallet, uint256 excludeAgentId) private view {
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        // If multiple owners exist for this wallet, reject
-        if ($._agentWalletMultipleOwners[wallet]) {
-            revert("wallet has multiple owners");
-        }
-        // If wallet is unowned, allow
-        address existingOwner = $._agentWalletOwner[wallet];
-        if (existingOwner == address(0)) return;
-        // If wallet is owned by calling agent's owner, allow
-        if (excludeAgentId != 0) {
-            address agentOwner = _ownerOf(excludeAgentId);
-            if (existingOwner == agentOwner) return;
-        }
-        // Otherwise, reject as non-unique
-        revert("wallet not unique");
-    }
-
-    function _setAgentWalletOwner(address wallet, address owner) private {
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        address existing = $._agentWalletOwner[wallet];
-        if (existing == address(0)) {
-            // First registrant
-            $._agentWalletOwner[wallet] = owner;
-        } else if (existing != owner) {
-            // Conflict: different owners, mark as multiple
-            $._agentWalletMultipleOwners[wallet] = true;
-            emit AgentWalletOwnerConflict(wallet, existing, owner);
-        }
-        // If same owner, no-op
     }
 
     function getVersion() external pure returns (string memory) {
