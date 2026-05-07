@@ -860,6 +860,19 @@ describe("ERC8004 Registries", async function () {
         identityRegistry.read.getOwnerFromAgentWallet([unknown.account.address])
       );
     });
+
+    it("Should revert getOwnerFromAgentWallet when multiple agents share wallet", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      // Register two agents — both get owner's address as agentWallet
+      await identityRegistry.write.register(["ipfs://agent1"]);
+      await identityRegistry.write.register(["ipfs://agent2"]);
+
+      await assert.rejects(
+        identityRegistry.read.getOwnerFromAgentWallet([owner.account.address])
+      );
+    });
   });
 
   describe("ReputationRegistry", async function () {
