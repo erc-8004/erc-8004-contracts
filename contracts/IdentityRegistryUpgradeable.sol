@@ -263,14 +263,16 @@ contract IdentityRegistryUpgradeable is
         emit ReverseLookupSet(agentId, metadataKey, metadataValue, msg.sender);
     }
 
-    /// @notice Get the owner of the agent registered to this wallet. Reverts if multiple agents share it.
+    /// @notice Get the owner of agents registered to this wallet. Reverts if agents belong to different owners.
     function getOwnerFromAgentWallet(address wallet) external view returns (address owner) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         bytes32 valueHash = keccak256(abi.encodePacked(wallet));
         uint256[] storage agents = $._reverseLookup["agentWallet"][valueHash];
         require(agents.length > 0, "wallet not found");
-        require(agents.length == 1, "multiple agents");
-        return ownerOf(agents[0]);
+        owner = ownerOf(agents[0]);
+        for (uint256 i = 1; i < agents.length; i++) {
+            require(ownerOf(agents[i]) == owner, "multiple owners");
+        }
     }
 
     // =========================================================================

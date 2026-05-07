@@ -861,7 +861,7 @@ describe("ERC8004 Registries", async function () {
       );
     });
 
-    it("Should revert getOwnerFromAgentWallet when multiple agents share wallet", async function () {
+    it("Should resolve getOwnerFromAgentWallet when multiple agents share wallet with same owner", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
       const [owner] = await viem.getWalletClients();
 
@@ -869,8 +869,101 @@ describe("ERC8004 Registries", async function () {
       await identityRegistry.write.register(["ipfs://agent1"]);
       await identityRegistry.write.register(["ipfs://agent2"]);
 
+      // Same owner, should resolve fine
+      const resolvedOwner = await identityRegistry.read.getOwnerFromAgentWallet([owner.account.address]);
+      assert.equal(resolvedOwner.toLowerCase(), owner.account.address.toLowerCase());
+    });
+
+    it("Should revert getOwnerFromAgentWallet when agents have different owners", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [ownerA, ownerB, sharedWallet] = await viem.getWalletClients();
+
+      // ownerA registers agent1
+      const txHash1 = await identityRegistry.write.register(
+        ["ipfs://agent1"],
+        { account: ownerA.account }
+      );
+      const agentId1 = await getAgentIdFromRegistration(txHash1);
+
+      // ownerB registers agent2
+      const txHash2 = await identityRegistry.write.register(
+        ["ipfs://agent2"],
+        { account: ownerB.account }
+      );
+      const agentId2 = await getAgentIdFromRegistration(txHash2);
+
+      const chainId = await publicClient.getChainId();
+      const block = await publicClient.getBlock();
+      const deadline = block.timestamp + 240n;
+
+      // Point agent1's wallet to sharedWallet
+      const sig1 = await sharedWallet.signTypedData({
+        account: sharedWallet.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId: agentId1,
+          newWallet: sharedWallet.account.address,
+          owner: ownerA.account.address,
+          deadline,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId1, sharedWallet.account.address, deadline, sig1],
+        { account: ownerA.account }
+      );
+
+      // Point agent2's wallet to the same sharedWallet
+      const block2 = await publicClient.getBlock();
+      const deadline2 = block2.timestamp + 240n;
+
+      const sig2 = await sharedWallet.signTypedData({
+        account: sharedWallet.account,
+        domain: {
+          name: "ERC8004IdentityRegistry",
+          version: "1",
+          chainId,
+          verifyingContract: identityRegistry.address,
+        },
+        types: {
+          AgentWalletSet: [
+            { name: "agentId", type: "uint256" },
+            { name: "newWallet", type: "address" },
+            { name: "owner", type: "address" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "AgentWalletSet",
+        message: {
+          agentId: agentId2,
+          newWallet: sharedWallet.account.address,
+          owner: ownerB.account.address,
+          deadline: deadline2,
+        },
+      });
+
+      await identityRegistry.write.setAgentWallet(
+        [agentId2, sharedWallet.account.address, deadline2, sig2],
+        { account: ownerB.account }
+      );
+
+      // Both agents point to sharedWallet but have different owners — should revert
       await assert.rejects(
-        identityRegistry.read.getOwnerFromAgentWallet([owner.account.address])
+        identityRegistry.read.getOwnerFromAgentWallet([sharedWallet.account.address])
       );
     });
   });
