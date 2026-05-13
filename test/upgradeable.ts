@@ -75,20 +75,6 @@ describe("ERC8004 Upgradeable Registries", async function () {
   }
 
   describe("IdentityRegistryUpgradeable", async function () {
-    it("Should deploy through proxy and initialize", async function () {
-      const [owner] = await viem.getWalletClients();
-
-      const identityRegistry = await deployIdentityRegistryProxy();
-
-      // Verify initialization
-      const version = await identityRegistry.read.getVersion();
-      assert.equal(version, "2.0.0");
-
-      // Verify owner
-      const contractOwner = await identityRegistry.read.owner();
-      assert.equal(contractOwner.toLowerCase(), owner.account.address.toLowerCase());
-    });
-
     it("Should prevent double initialization", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
 

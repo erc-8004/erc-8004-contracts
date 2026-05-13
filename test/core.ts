@@ -663,6 +663,29 @@ describe("ERC8004 Registries", async function () {
       assert.equal(agents[0], agentId);
     });
 
+    it("Should populate reverse lookup for entries supplied at register(uri, metadata)", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const [owner] = await viem.getWalletClients();
+
+      const nameValue = toHex("RegTimeAgent");
+      const serviceValue = toHex("audit");
+      const metadata = [
+        { metadataKey: "name", metadataValue: nameValue },
+        { metadataKey: "service", metadataValue: serviceValue },
+      ];
+
+      const txHash = await identityRegistry.write.register(["ipfs://agent", metadata]);
+      const agentId = await getAgentIdFromRegistration(txHash);
+
+      const byName = await identityRegistry.read.agentByMetadata(["name", nameValue]);
+      assert.equal(byName.length, 1);
+      assert.equal(byName[0], agentId);
+
+      const byService = await identityRegistry.read.agentByMetadata(["service", serviceValue]);
+      assert.equal(byService.length, 1);
+      assert.equal(byService[0], agentId);
+    });
+
     it("Should update reverse lookup on setMetadata", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
       const [owner] = await viem.getWalletClients();
