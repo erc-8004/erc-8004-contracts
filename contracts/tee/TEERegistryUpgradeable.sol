@@ -147,6 +147,37 @@ contract TEERegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     // =========================================================================
+    // CONVENIENCE: ONE-SHOT AGENT REGISTRATION (Sparsity RI compatible)
+    // =========================================================================
+
+    event AgentRegistered(address indexed pubKey, uint256 indexed agentId, bytes32 keyHash, address verifier);
+
+    /// @notice One-shot TEE agent registration: verify proof, add key, and link to agent ID.
+    /// @dev Combines addKey + linkKey in a single transaction. The caller must own agentId.
+    ///      Matches Sparsity's registerAgent UX while keeping ERC-8004's two-step architecture.
+    function registerAgent(
+        bytes calldata proof,
+        address pubKey,
+        bytes calldata pubKeyBytes,
+        uint256 expiration,
+        address verifier,
+        uint256 agentId
+    ) external returns (bytes32 keyHash) {
+        // Step 1: addKey (permissionless, anyone can submit a verified key)
+        keyHash = this.addKey(proof, pubKey, pubKeyBytes, expiration, verifier);
+
+        // Step 2: linkKey (requires agent ownership)
+        // Re-use linkKey logic inline to avoid re-entrancy via external call
+        TEERegistryStorage storage $ = _getTEERegistryStorage();
+        KeyInfo storage k = $.keys[pubKey];
+        require(k.verifier != address(0), "key not found");
+        require(k.expiration > block.timestamp || k.expiration == 0, "key expired");
+        _requireAgentAuth(agentId);
+
+        emit AgentRegistered(pubKey, agentId, keyHash, verifier);
+    }
+
+    // =========================================================================
     // KEY → AGENT LINKING (agent-authorized)
     // =========================================================================
 

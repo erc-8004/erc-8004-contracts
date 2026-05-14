@@ -314,4 +314,145 @@ describe("TEE Key Registry (standalone, with sparsity RI features)", async funct
       );
     });
   });
+
+  // ===== SPARSITY TEE VERIFIER ADAPTER =====
+
+  describe("SparsityTEEVerifier adapter", function () {
+    it("should verify valid Sparsity-format proof and return identifiers", async function () {
+      const mockSparsity = await viem.deployContract("MockSparsityVerifier", [true]);
+      const adapter = await viem.deployContract("SparsityTEEVerifier", [mockSparsity.address]);
+
+      const [owner, tee] = await viem.getWalletClients();
+      const teeArch = BigInt(1); // NITRO
+      const codeMeasurement = keccak256(toHex("pcr-composite-123"));
+      const teePubkey = tee.account.address;
+      const agentWallet = owner.account.address;
+
+      // Build publicValues: (uint256 teeArch, bytes32 codeMeasurement, address teePubkey, address agentWalletAddress)
+      const publicValues = encodeAbiParameters(
+        [{ type: "uint256" }, { type: "bytes32" }, { type: "address" }, { type: "address" }],
+        [teeArch, codeMeasurement, teePubkey, agentWallet]
+      );
+      const proofBytes = toHex("zk-proof-data");
+      const proof = encodeAbiParameters(
+        [{ type: "bytes" }, { type: "bytes" }],
+        [publicValues, proofBytes]
+      );
+
+      const [success, identifiers] = await adapter.read.verify([proof, teePubkey]);
+      assert.equal(success, true);
+      assert.equal(identifiers.length, 2);
+      assert.equal(identifiers[0], codeMeasurement);
+      assert.equal(identifiers[1], toHex(teeArch, { size: 32 }));
+    });
+
+    it("should reject proof with mismatched pubkey", async function () {
+      const mockSparsity = await viem.deployContract("MockSparsityVerifier", [true]);
+      const adapter = await viem.deployContract("SparsityTEEVerifier", [mockSparsity.address]);
+
+      const [owner, tee, attacker] = await viem.getWalletClients();
+      const teeArch = BigInt(1);
+      const codeMeasurement = keccak256(toHex("pcr-composite-123"));
+      const teePubkey = tee.account.address; // attested pubkey
+      const agentWallet = owner.account.address;
+
+      const publicValues = encodeAbiParameters(
+        [{ type: "uint256" }, { type: "bytes32" }, { type: "address" }, { type: "address" }],
+        [teeArch, codeMeasurement, teePubkey, agentWallet]
+      );
+      const proofBytes = toHex("zk-proof-data");
+      const proof = encodeAbiParameters(
+        [{ type: "bytes" }, { type: "bytes" }],
+        [publicValues, proofBytes]
+      );
+
+      // Claiming a different pubkey than what's attested
+      const [success, identifiers] = await adapter.read.verify([proof, attacker.account.address]);
+      assert.equal(success, false);
+      assert.equal(identifiers.length, 0);
+    });
+
+    it("should reject proof when zk verification fails", async function () {
+      const mockSparsity = await viem.deployContract("MockSparsityVerifier", [false]);
+      const adapter = await viem.deployContract("SparsityTEEVerifier", [mockSparsity.address]);
+
+      const [owner, tee] = await viem.getWalletClients();
+      const teeArch = BigInt(1);
+      const codeMeasurement = keccak256(toHex("pcr-composite-123"));
+      const teePubkey = tee.account.address;
+      const agentWallet = owner.account.address;
+
+      const publicValues = encodeAbiParameters(
+        [{ type: "uint256" }, { type: "bytes32" }, { type: "address" }, { type: "address" }],
+        [teeArch, codeMeasurement, teePubkey, agentWallet]
+      );
+      const proofBytes = toHex("bad-zk-proof");
+      const proof = encodeAbiParameters(
+        [{ type: "bytes" }, { type: "bytes" }],
+        [publicValues, proofBytes]
+      );
+
+      const [success, identifiers] = await adapter.read.verify([proof, teePubkey]);
+      assert.equal(success, false);
+      assert.equal(identifiers.length, 0);
+    });
+  });
+
+  // ===== REGISTER AGENT CONVENIENCE =====
+
+  describe("registerAgent convenience", function () {
+    it("should register agent in one shot (addKey + linkKey)", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const teeRegistry = await deployTEERegistryProxy(identityRegistry.address);
+
+      const verifier = await viem.deployContract("MockTEEVerifier", [true]);
+      const codeMeasurement = keccak256(toHex("pcr-composite-456"));
+      await verifier.write.setResult([true, [codeMeasurement]]);
+      await teeRegistry.write.addVerifier([verifier.address, 1]); // NITRO
+
+      const [owner] = await viem.getWalletClients();
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Mint an agent ID first
+      await identityRegistry.write.mint([owner.account.address]);
+      const agentId = 1n;
+
+      // One-shot registration
+      await teeRegistry.write.registerAgent(
+        [toHex("proof"), owner.account.address, toHex("pub-key-bytes"), expiration, verifier.address, agentId]
+      );
+
+      // Verify key is registered
+      const [valid, identifiers, expiry, storedVerifier, storedPubKeyBytes] =
+        await teeRegistry.read.getKey([owner.account.address]);
+      assert.equal(valid, true);
+      assert.equal(identifiers[0], codeMeasurement);
+      assert.equal(storedVerifier.toLowerCase(), verifier.address.toLowerCase());
+      assert.equal(storedPubKeyBytes, toHex("pub-key-bytes"));
+    });
+
+    it("should reject registerAgent if caller does not own agentId", async function () {
+      const identityRegistry = await deployIdentityRegistryProxy();
+      const teeRegistry = await deployTEERegistryProxy(identityRegistry.address);
+
+      const verifier = await viem.deployContract("MockTEEVerifier", [true]);
+      await teeRegistry.write.addVerifier([verifier.address, 0]);
+
+      const [owner, attacker] = await viem.getWalletClients();
+      const expiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      // Owner mints agent
+      await identityRegistry.write.mint([owner.account.address]);
+      const agentId = 1n;
+
+      // Attacker tries to register agent on their own key
+      await assert.rejects(
+        teeRegistry.write.registerAgent(
+          [toHex("proof"), attacker.account.address, "0x", expiration, verifier.address, agentId],
+          { account: attacker.account }
+        ),
+        /Not authorized/
+      );
+    });
+  });
 });
