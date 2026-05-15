@@ -3,62 +3,79 @@ pragma solidity ^0.8.20;
 
 import "./TEERegistryUpgradeable.sol";
 
-/// @notice Interface for Sparsity's zk co-processor verifier.
-/// @dev Sparsity TEEAgentRegistry exposes verifyProof for attestation verification.
-interface ISparsityVerifier {
-    function verifyProof(bytes calldata publicValues, bytes calldata proofBytes) external view returns (bool);
+/// @notice Canonical Sparsity RI verifier interface (from sparsity-xyz/8004-tee-registry-ri).
+/// @dev Each TEE platform (TDX via DCAPVerifier, Nitro via NitroVerifier) implements this.
+///      Non-view: DCAP and Nitro cert-chain validation mutate verifier state for caching.
+interface ISparsityIVerifier {
+    function verify(bytes calldata attestation)
+        external
+        returns (bytes32 codeMeasurement, bytes memory pubKey, bytes memory userData);
 }
 
-/// @notice Adapter that bridges ERC-8004 TEERegistry to Sparsity's zk verifier.
-/// @dev Proof format: abi.encode(publicValues, proofBytes)
-///      publicValues contains: teeArch (uint256), codeMeasurement (bytes32),
-///      teePubkey (address), agentWalletAddress (address)
-///      This matches Sparsity's 8004-ri-tutorial registration flow.
-contract SparsityTEEVerifier is ITEEVerifier {
-    ISparsityVerifier public immutable sparsityVerifier;
+/// @notice Tag identifying which Sparsity TEE platform this adapter is wired to.
+/// @dev Stored as identifiers[1] for reverse lookup by platform.
+enum SparsityTEEArch {
+    TDX,    // matches Sparsity TEEType.TDX (DCAPVerifier — Intel TDX/SGX via Automata DCAP)
+    NITRO   // matches Sparsity TEEType.NITRO (NitroVerifier — AWS Nitro Enclaves)
+}
 
-    /// @param _sparsityVerifier Address of Sparsity's deployed verifier contract
-    ///        (e.g. TEEAgentRegistry on Base Sepolia: 0xe718ae...)
-    constructor(address _sparsityVerifier) {
+/// @title SparsityTEEVerifier
+/// @notice Adapter bridging ERC-8004 ITEEVerifier to Sparsity's canonical IVerifier.
+/// @dev Wraps a Sparsity per-platform verifier (DCAPVerifier or NitroVerifier).
+///      The agent's EVM address must be embedded in the attestation's userData
+///      (first 20 bytes), bound to the enclave measurement via TEE-signed attestation.
+contract SparsityTEEVerifier is ITEEVerifier {
+    /// @notice The underlying Sparsity verifier (DCAPVerifier or NitroVerifier instance).
+    ISparsityIVerifier public immutable sparsityVerifier;
+
+    /// @notice Which TEE platform this adapter is wired to (for identifiers[1] tag).
+    SparsityTEEArch public immutable teeArch;
+
+    constructor(address _sparsityVerifier, SparsityTEEArch _teeArch) {
         require(_sparsityVerifier != address(0), "zero verifier");
-        sparsityVerifier = ISparsityVerifier(_sparsityVerifier);
+        sparsityVerifier = ISparsityIVerifier(_sparsityVerifier);
+        teeArch = _teeArch;
     }
 
-    /// @notice Verify a Sparsity-format TEE attestation proof.
-    /// @param proof abi.encode(publicValues, proofBytes) — Sparsity's proof bundle.
-    /// @param pubKey The EVM address claimed as the TEE public key.
-    /// @return success Whether the zk proof verified successfully.
-    /// @return identifiers [codeMeasurement, teeArch] as bytes32 array.
+    /// @notice Verify a Sparsity-format TEE attestation.
+    /// @param proof Raw attestation bytes (DCAP quote for TDX, COSE_Sign1 for Nitro).
+    /// @param pubKey The EVM address claimed as the TEE-controlled agent wallet.
+    /// @return success Whether the attestation verified AND userData[0:20] == pubKey.
+    /// @return identifiers [codeMeasurement, bytes32(uint256(teeArch))].
     function verify(bytes calldata proof, address pubKey)
         external
-        view
+        override
         returns (bool success, bytes32[] memory identifiers)
     {
-        // Decode Sparsity proof bundle
-        (bytes memory publicValues, bytes memory proofBytes) =
-            abi.decode(proof, (bytes, bytes));
+        // Call Sparsity's verifier. Reverts on invalid attestation per IVerifier contract,
+        // so wrap in a try/catch and surface as (false, empty) to match ITEEVerifier semantics.
+        try sparsityVerifier.verify(proof) returns (
+            bytes32 codeMeasurement,
+            bytes memory /* attestedPubKey */,
+            bytes memory userData
+        ) {
+            // userData must contain at least the 20-byte EVM address the TEE controls.
+            if (userData.length < 20) {
+                return (false, new bytes32[](0));
+            }
 
-        // Run zk verification via Sparsity's verifier
-        success = sparsityVerifier.verifyProof(publicValues, proofBytes);
-        if (!success) {
+            address attestedAddr;
+            assembly {
+                // userData is a bytes memory: 32-byte length prefix, then payload.
+                // Load first 32 bytes of payload, shift right 96 bits to get top 20 bytes as address.
+                attestedAddr := shr(96, mload(add(userData, 32)))
+            }
+
+            if (attestedAddr != pubKey) {
+                return (false, new bytes32[](0));
+            }
+
+            identifiers = new bytes32[](2);
+            identifiers[0] = codeMeasurement;
+            identifiers[1] = bytes32(uint256(teeArch));
+            return (true, identifiers);
+        } catch {
             return (false, new bytes32[](0));
         }
-
-        // Decode publicValues to extract identifiers and verify pubkey
-        // Layout: (uint256 teeArch, bytes32 codeMeasurement, address teePubkey, address agentWalletAddress)
-        (uint256 teeArch, bytes32 codeMeasurement, address teePubkey, ) =
-            abi.decode(publicValues, (uint256, bytes32, address, address));
-
-        // Verify the claimed pubKey matches the attested teePubkey
-        if (teePubkey != pubKey) {
-            return (false, new bytes32[](0));
-        }
-
-        // Return identifiers for reverse lookup
-        identifiers = new bytes32[](2);
-        identifiers[0] = codeMeasurement;
-        identifiers[1] = bytes32(teeArch);
-
-        return (true, identifiers);
     }
 }

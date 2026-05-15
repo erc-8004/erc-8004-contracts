@@ -1,21 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Mock Sparsity zk verifier for testing the SparsityTEEVerifier adapter.
-/// @dev Simulates ISparsityVerifier.verifyProof behavior.
+/// @notice Mock implementing Sparsity's canonical IVerifier interface for testing.
+/// @dev Drop-in replacement for DCAPVerifier/NitroVerifier in unit tests.
+///      Real verifiers do CBOR/ASN.1 cert chain validation; this just returns
+///      whatever fixture values the test sets up.
 contract MockSparsityVerifier {
-    bool public shouldPass;
+    bytes32 public codeMeasurement;
+    bytes public pubKey;
+    bytes public userData;
+    bool public shouldRevert;
 
-    constructor(bool _shouldPass) {
-        shouldPass = _shouldPass;
+    function setOutput(bytes32 _codeMeasurement, bytes calldata _pubKey, bytes calldata _userData) external {
+        codeMeasurement = _codeMeasurement;
+        pubKey = _pubKey;
+        userData = _userData;
     }
 
-    function setShouldPass(bool _shouldPass) external {
-        shouldPass = _shouldPass;
+    function setShouldRevert(bool _shouldRevert) external {
+        shouldRevert = _shouldRevert;
     }
 
-    /// @notice Mock verifyProof — always returns shouldPass, ignores inputs.
-    function verifyProof(bytes calldata, bytes calldata) external view returns (bool) {
-        return shouldPass;
+    /// @notice Mock verify — returns fixture values, or reverts to simulate invalid attestation.
+    /// @dev Matches canonical sparsity-xyz/8004-tee-registry-ri IVerifier signature.
+    function verify(bytes calldata /* attestation */)
+        external
+        view
+        returns (bytes32, bytes memory, bytes memory)
+    {
+        require(!shouldRevert, "mock: invalid attestation");
+        return (codeMeasurement, pubKey, userData);
     }
 }

@@ -12,8 +12,10 @@ interface IIdentityRegistry {
 
 /// @notice TEE verifier interface (from feat/tee gospel).
 /// @dev Verifiers return (bool success, bytes32[] identifiers) for multi-attestation support.
+///      Non-view because real verifiers (Automata DCAP, AWS Nitro CertManager) mutate state
+///      for cert chain caching during attestation verification.
 interface ITEEVerifier {
-    function verify(bytes calldata proof, address pubKey) external view returns (bool success, bytes32[] memory identifiers);
+    function verify(bytes calldata proof, address pubKey) external returns (bool success, bytes32[] memory identifiers);
 }
 
 /// @notice TEE platform types (from sparsity-xyz RI).
