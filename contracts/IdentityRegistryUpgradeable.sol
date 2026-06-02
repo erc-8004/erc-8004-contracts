@@ -250,7 +250,11 @@ contract IdentityRegistryUpgradeable is
             _removeFromArray($._metadataReverseLookup[key][keccak256(oldValue)], agentId);
         }
         if (value.length > 0) {
-            _addToArray($._metadataReverseLookup[key][keccak256(value)], agentId);
+            uint256[] storage bucket = $._metadataReverseLookup[key][keccak256(value)];
+            if (keccak256(bytes(key)) == RESERVED_AGENT_WALLET_KEY_HASH) {
+                require(bucket.length == 0, "wallet already assigned");
+            }
+            _addToArray(bucket, agentId);
         }
         $._metadata[agentId][key] = value;
         emit MetadataSet(agentId, key, key, value);
