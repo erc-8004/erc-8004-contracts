@@ -104,7 +104,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
     });
 
     it("Should upgrade to new implementation", async function () {
-      const [owner] = await viem.getWalletClients();
+      const [owner, other] = await viem.getWalletClients();
 
       const identityRegistry = await deployIdentityRegistryProxy();
 
@@ -127,7 +127,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
       assert.equal(tokenOwner.toLowerCase(), owner.account.address.toLowerCase());
 
       // Verify can still register new agents
-      const newTxHash = await identityRegistry.write.register(["ipfs://v2-agent"]);
+      const newTxHash = await identityRegistry.write.register(["ipfs://v2-agent"], { account: other.account });
       const newAgentId = await getAgentIdFromRegistration(newTxHash);
       assert.ok(newAgentId > agentId);
     });
@@ -244,7 +244,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
   describe("Full Integration Test with Upgrades", async function () {
     it("Should deploy all registries, use them, and upgrade all", async function () {
-      const [owner, client, validator] = await viem.getWalletClients();
+      const [owner, client, validator, other] = await viem.getWalletClients();
 
       // Deploy all three registries
       const identityRegistry = await deployIdentityRegistryProxy();
@@ -269,7 +269,7 @@ describe("ERC8004 Upgradeable Registries", async function () {
       assert.equal(tokenURI, "ipfs://test-agent");
 
       // Can still register new agents
-      const newTxHash = await identityRegistry.write.register(["ipfs://post-upgrade-agent"]);
+      const newTxHash = await identityRegistry.write.register(["ipfs://post-upgrade-agent"], { account: other.account });
       const newAgentId = await getAgentIdFromRegistration(newTxHash);
       assert.ok(newAgentId > agentId);
     });
@@ -382,23 +382,23 @@ describe("ERC8004 Upgradeable Registries", async function () {
 
     describe("Storage Collision Prevention", async function () {
       it("Should maintain complex storage across upgrades", async function () {
-        const [owner] = await viem.getWalletClients();
+        const signers = await viem.getWalletClients();
 
         const registry = await deployIdentityRegistryProxy();
 
         // Create multiple agents with different data
         const agents = [];
         for (let i = 0; i < 5; i++) {
-          const txHash = await registry.write.register([`ipfs://agent-${i}`]);
+          const txHash = await registry.write.register([`ipfs://agent-${i}`], { account: signers[i].account });
           const agentId = await getAgentIdFromRegistration(txHash);
           agents.push(agentId);
         }
 
         // Store metadata for different agents
-        await registry.write.setMetadata([agents[0], "key1", toHex("value1")]);
-        await registry.write.setMetadata([agents[0], "key2", toHex("value2")]);
-        await registry.write.setMetadata([agents[1], "key1", toHex("different-value")]);
-        await registry.write.setMetadata([agents[2], "special", toHex("special-data")]);
+        await registry.write.setMetadata([agents[0], "key1", toHex("value1")], { account: signers[0].account });
+        await registry.write.setMetadata([agents[0], "key2", toHex("value2")], { account: signers[0].account });
+        await registry.write.setMetadata([agents[1], "key1", toHex("different-value")], { account: signers[1].account });
+        await registry.write.setMetadata([agents[2], "special", toHex("special-data")], { account: signers[2].account });
 
         // Upgrade to V2
         const implV2 = await viem.deployContract("IdentityRegistryUpgradeable");
@@ -422,26 +422,26 @@ describe("ERC8004 Upgradeable Registries", async function () {
         assert.equal(meta4, toHex("special-data"));
 
         // Verify can still add new agents and metadata after upgrade
-        const newTxHash = await registry.write.register(["ipfs://post-upgrade"]);
+        const newTxHash = await registry.write.register(["ipfs://post-upgrade"], { account: signers[5].account });
         const newAgentId = await getAgentIdFromRegistration(newTxHash);
-        await registry.write.setMetadata([newAgentId, "new-key", toHex("new-value")]);
+        await registry.write.setMetadata([newAgentId, "new-key", toHex("new-value")], { account: signers[5].account });
 
         const newMeta = await registry.read.getMetadata([newAgentId, "new-key"]);
         assert.equal(newMeta, toHex("new-value"));
       });
 
       it("Should preserve nested mapping storage across upgrades", async function () {
-        const [owner, client1, client2] = await viem.getWalletClients();
+        const [owner, client1, client2, agentOwner2] = await viem.getWalletClients();
 
         // Deploy both registries
         const identityRegistry = await deployIdentityRegistryProxy();
         const reputationRegistry = await deployReputationRegistryProxy(identityRegistry.address);
 
-        // Register agents
+        // Register agents (different signers to satisfy agentWallet uniqueness)
         const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
         const agentId1 = await getAgentIdFromRegistration(txHash1);
 
-        const txHash2 = await identityRegistry.write.register(["ipfs://agent2"]);
+        const txHash2 = await identityRegistry.write.register(["ipfs://agent2"], { account: agentOwner2.account });
         const agentId2 = await getAgentIdFromRegistration(txHash2);
 
         // Create multiple feedbacks with complex data

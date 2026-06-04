@@ -124,10 +124,11 @@ describe("ERC8004 Registries", async function () {
 
     it("Should auto-increment agentId", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
+      const [s1, s2, s3] = await viem.getWalletClients();
 
-      const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
-      const txHash2 = await identityRegistry.write.register(["ipfs://agent2"]);
-      const txHash3 = await identityRegistry.write.register(["ipfs://agent3"]);
+      const txHash1 = await identityRegistry.write.register(["ipfs://agent1"], { account: s1.account });
+      const txHash2 = await identityRegistry.write.register(["ipfs://agent2"], { account: s2.account });
+      const txHash3 = await identityRegistry.write.register(["ipfs://agent3"], { account: s3.account });
 
       const agentId1 = await getAgentIdFromRegistration(txHash1);
       const agentId2 = await getAgentIdFromRegistration(txHash2);
@@ -178,21 +179,22 @@ describe("ERC8004 Registries", async function () {
      */
     it("Should support different URI schemes for tokenURI", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
+      const [s1, s2, s3] = await viem.getWalletClients();
 
       // Test ipfs://
-      const txHash1 = await identityRegistry.write.register(["ipfs://QmTestCID123"]);
+      const txHash1 = await identityRegistry.write.register(["ipfs://QmTestCID123"], { account: s1.account });
       const agentId1 = await getAgentIdFromRegistration(txHash1);
       const ipfsURI = await identityRegistry.read.tokenURI([agentId1]);
       assert.equal(ipfsURI, "ipfs://QmTestCID123");
 
       // Test https://
-      const txHash2 = await identityRegistry.write.register(["https://domain.com/agent3.json"]);
+      const txHash2 = await identityRegistry.write.register(["https://domain.com/agent3.json"], { account: s2.account });
       const agentId2 = await getAgentIdFromRegistration(txHash2);
       const httpsURI = await identityRegistry.read.tokenURI([agentId2]);
       assert.equal(httpsURI, "https://domain.com/agent3.json");
 
       // Test http:// (should work even though spec upgrades to https)
-      const txHash3 = await identityRegistry.write.register(["http://example.com/agent.json"]);
+      const txHash3 = await identityRegistry.write.register(["http://example.com/agent.json"], { account: s3.account });
       const agentId3 = await getAgentIdFromRegistration(txHash3);
       const httpURI = await identityRegistry.read.tokenURI([agentId3]);
       assert.equal(httpURI, "http://example.com/agent.json");
@@ -818,16 +820,16 @@ describe("ERC8004 Registries", async function () {
 
     it("Should return multiple agents for same metadata value", async function () {
       const identityRegistry = await deployIdentityRegistryProxy();
-      const [owner] = await viem.getWalletClients();
+      const [s1, s2] = await viem.getWalletClients();
 
-      const txHash1 = await identityRegistry.write.register(["ipfs://agent1"]);
-      const txHash2 = await identityRegistry.write.register(["ipfs://agent2"]);
+      const txHash1 = await identityRegistry.write.register(["ipfs://agent1"], { account: s1.account });
+      const txHash2 = await identityRegistry.write.register(["ipfs://agent2"], { account: s2.account });
       const agentId1 = await getAgentIdFromRegistration(txHash1);
       const agentId2 = await getAgentIdFromRegistration(txHash2);
 
       const value = toHex("shared-trait");
-      await identityRegistry.write.setMetadata([agentId1, "trait", value]);
-      await identityRegistry.write.setMetadata([agentId2, "trait", value]);
+      await identityRegistry.write.setMetadata([agentId1, "trait", value], { account: s1.account });
+      await identityRegistry.write.setMetadata([agentId2, "trait", value], { account: s2.account });
 
       const agents = await identityRegistry.read.agentByMetadata(["trait", value]);
       assert.equal(agents.length, 2);
@@ -884,111 +886,6 @@ describe("ERC8004 Registries", async function () {
       );
     });
 
-    it("Should resolve getOwnerFromAgentWallet when multiple agents share wallet with same owner", async function () {
-      const identityRegistry = await deployIdentityRegistryProxy();
-      const [owner] = await viem.getWalletClients();
-
-      // Register two agents — both get owner's address as agentWallet
-      await identityRegistry.write.register(["ipfs://agent1"]);
-      await identityRegistry.write.register(["ipfs://agent2"]);
-
-      // Same owner, should resolve fine
-      const resolvedOwner = await identityRegistry.read.getOwnerFromAgentWallet([owner.account.address]);
-      assert.equal(resolvedOwner.toLowerCase(), owner.account.address.toLowerCase());
-    });
-
-    it("Should revert getOwnerFromAgentWallet when agents have different owners", async function () {
-      const identityRegistry = await deployIdentityRegistryProxy();
-      const [ownerA, ownerB, sharedWallet] = await viem.getWalletClients();
-
-      // ownerA registers agent1
-      const txHash1 = await identityRegistry.write.register(
-        ["ipfs://agent1"],
-        { account: ownerA.account }
-      );
-      const agentId1 = await getAgentIdFromRegistration(txHash1);
-
-      // ownerB registers agent2
-      const txHash2 = await identityRegistry.write.register(
-        ["ipfs://agent2"],
-        { account: ownerB.account }
-      );
-      const agentId2 = await getAgentIdFromRegistration(txHash2);
-
-      const chainId = await publicClient.getChainId();
-      const block = await publicClient.getBlock();
-      const deadline = block.timestamp + 240n;
-
-      // Point agent1's wallet to sharedWallet
-      const sig1 = await sharedWallet.signTypedData({
-        account: sharedWallet.account,
-        domain: {
-          name: "ERC8004IdentityRegistry",
-          version: "1",
-          chainId,
-          verifyingContract: identityRegistry.address,
-        },
-        types: {
-          AgentWalletSet: [
-            { name: "agentId", type: "uint256" },
-            { name: "newWallet", type: "address" },
-            { name: "owner", type: "address" },
-            { name: "deadline", type: "uint256" },
-          ],
-        },
-        primaryType: "AgentWalletSet",
-        message: {
-          agentId: agentId1,
-          newWallet: sharedWallet.account.address,
-          owner: ownerA.account.address,
-          deadline,
-        },
-      });
-
-      await identityRegistry.write.setAgentWallet(
-        [agentId1, sharedWallet.account.address, deadline, sig1],
-        { account: ownerA.account }
-      );
-
-      // Point agent2's wallet to the same sharedWallet
-      const block2 = await publicClient.getBlock();
-      const deadline2 = block2.timestamp + 240n;
-
-      const sig2 = await sharedWallet.signTypedData({
-        account: sharedWallet.account,
-        domain: {
-          name: "ERC8004IdentityRegistry",
-          version: "1",
-          chainId,
-          verifyingContract: identityRegistry.address,
-        },
-        types: {
-          AgentWalletSet: [
-            { name: "agentId", type: "uint256" },
-            { name: "newWallet", type: "address" },
-            { name: "owner", type: "address" },
-            { name: "deadline", type: "uint256" },
-          ],
-        },
-        primaryType: "AgentWalletSet",
-        message: {
-          agentId: agentId2,
-          newWallet: sharedWallet.account.address,
-          owner: ownerB.account.address,
-          deadline: deadline2,
-        },
-      });
-
-      await identityRegistry.write.setAgentWallet(
-        [agentId2, sharedWallet.account.address, deadline2, sig2],
-        { account: ownerB.account }
-      );
-
-      // Both agents point to sharedWallet but have different owners — should revert
-      await assert.rejects(
-        identityRegistry.read.getOwnerFromAgentWallet([sharedWallet.account.address])
-      );
-    });
   });
 
   describe("ReputationRegistry", async function () {
