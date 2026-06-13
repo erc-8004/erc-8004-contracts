@@ -24,6 +24,8 @@ contract IdentityRegistryUpgradeable is
         uint256 _lastId;
         // agentId => metadataKey => metadataValue (includes "agentWallet")
         mapping(uint256 => mapping(string => bytes)) _metadata;
+        // Metadata reverse lookup: metadataKey => keccak256(metadataValue) => List<agentId>
+        mapping(string => mapping(bytes32 => uint256[])) _metadataReverseLookup;
     }
 
     // keccak256(abi.encode(uint256(keccak256("erc8004.identity.registry")) - 1)) & ~bytes32(uint256(0xff))
@@ -39,6 +41,7 @@ contract IdentityRegistryUpgradeable is
     event Registered(uint256 indexed agentId, string agentURI, address indexed owner);
     event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue);
     event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy);
+    event MetadataReverseLookupSet(uint256 indexed agentId, string indexed metadataKey, bytes metadataValue, address indexed by);
 
     bytes32 private constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
@@ -60,35 +63,31 @@ contract IdentityRegistryUpgradeable is
     function register() external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
+        _writeMetadata(agentId, "agentWallet", abi.encodePacked(msg.sender));
         emit Registered(agentId, "", msg.sender);
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
     }
 
     function register(string memory agentURI) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
         _setTokenURI(agentId, agentURI);
+        _writeMetadata(agentId, "agentWallet", abi.encodePacked(msg.sender));
         emit Registered(agentId, agentURI, msg.sender);
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
     }
 
     function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId) {
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         agentId = $._lastId++;
-        $._metadata[agentId]["agentWallet"] = abi.encodePacked(msg.sender);
         _safeMint(msg.sender, agentId);
         _setTokenURI(agentId, agentURI);
+        _writeMetadata(agentId, "agentWallet", abi.encodePacked(msg.sender));
         emit Registered(agentId, agentURI, msg.sender);
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
 
         for (uint256 i; i < metadata.length; i++) {
             require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
-            $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
-            emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
+            _writeMetadata(agentId, metadata[i].metadataKey, metadata[i].metadataValue);
         }
     }
 
@@ -106,9 +105,7 @@ contract IdentityRegistryUpgradeable is
             "Not authorized"
         );
         require(keccak256(bytes(metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        $._metadata[agentId][metadataKey] = metadataValue;
-        emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
+        _writeMetadata(agentId, metadataKey, metadataValue);
     }
 
     function setAgentURI(uint256 agentId, string calldata newURI) external {
@@ -159,9 +156,7 @@ contract IdentityRegistryUpgradeable is
             require(ok && res.length >= 32 && abi.decode(res, (bytes4)) == ERC1271_MAGICVALUE, "invalid wallet sig");
         }
 
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        $._metadata[agentId]["agentWallet"] = abi.encodePacked(newWallet);
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(newWallet));
+        _writeMetadata(agentId, "agentWallet", abi.encodePacked(newWallet));
     }
 
     function unsetAgentWallet(uint256 agentId) external {
@@ -172,10 +167,7 @@ contract IdentityRegistryUpgradeable is
             msg.sender == getApproved(agentId),
             "Not authorized"
         );
-
-        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-        $._metadata[agentId]["agentWallet"] = "";
-        emit MetadataSet(agentId, "agentWallet", "agentWallet", "");
+        _writeMetadata(agentId, "agentWallet", "");
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -190,9 +182,7 @@ contract IdentityRegistryUpgradeable is
 
         // If this is a transfer (not mint), clear agentWallet BEFORE external call
         if (from != address(0) && to != address(0)) {
-            IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
-            $._metadata[tokenId]["agentWallet"] = "";
-            emit MetadataSet(tokenId, "agentWallet", "agentWallet", "");
+            _writeMetadata(tokenId, "agentWallet", "");
         }
 
         return super._update(to, tokenId, auth);
@@ -207,7 +197,87 @@ contract IdentityRegistryUpgradeable is
         return _isAuthorized(owner, spender, agentId);
     }
 
+    // =========================================================================
+    // REVERSE LOOKUP
+    // =========================================================================
+
+    /// @notice Generic reverse lookup: find all agent IDs that have metadata[key]=value.
+    /// @return agentIds Array of agent IDs matching the query. May be empty.
+    function agentByMetadata(string calldata metadataKey, bytes calldata metadataValue)
+        external
+        view
+        returns (uint256[] memory agentIds)
+    {
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        bytes32 valueHash = keccak256(metadataValue);
+        return $._metadataReverseLookup[metadataKey][valueHash];
+    }
+
+    /// @notice Unpermissioned write to the reverse lookup index.
+    /// Anyone can call this, but it only succeeds if the forward relation exists.
+    /// This enables retrofill of old agents without migrating the IdentityRegistry.
+    function setReverseLookup(uint256 agentId, string calldata metadataKey, bytes calldata metadataValue) external {
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        require(
+            keccak256($._metadata[agentId][metadataKey]) == keccak256(metadataValue),
+            "forward relation mismatch"
+        );
+        _addToArray($._metadataReverseLookup[metadataKey][keccak256(metadataValue)], agentId);
+        emit MetadataReverseLookupSet(agentId, metadataKey, metadataValue, msg.sender);
+    }
+
+    /// @notice Get the owner of agents registered to this wallet. Reverts if agents belong to different owners.
+    function getOwnerFromAgentWallet(address wallet) external view returns (address owner) {
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        bytes32 valueHash = keccak256(abi.encodePacked(wallet));
+        uint256[] storage agents = $._metadataReverseLookup["agentWallet"][valueHash];
+        require(agents.length > 0, "wallet not found");
+        owner = ownerOf(agents[0]);
+        for (uint256 i = 1; i < agents.length; i++) {
+            require(ownerOf(agents[i]) == owner, "multiple owners");
+        }
+    }
+
+    // =========================================================================
+    // INTERNAL WRITE HELPERS
+    // =========================================================================
+
+    /// @dev Single source of truth for metadata writes: keeps forward and reverse in sync, and emits MetadataSet.
+    function _writeMetadata(uint256 agentId, string memory key, bytes memory value) private {
+        IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
+        bytes memory oldValue = $._metadata[agentId][key];
+        if (oldValue.length > 0) {
+            _removeFromArray($._metadataReverseLookup[key][keccak256(oldValue)], agentId);
+        }
+        if (value.length > 0) {
+            uint256[] storage bucket = $._metadataReverseLookup[key][keccak256(value)];
+            if (keccak256(bytes(key)) == RESERVED_AGENT_WALLET_KEY_HASH) {
+                require(bucket.length == 0, "wallet already assigned");
+            }
+            _addToArray(bucket, agentId);
+        }
+        $._metadata[agentId][key] = value;
+        emit MetadataSet(agentId, key, key, value);
+    }
+
+    function _removeFromArray(uint256[] storage arr, uint256 value) private {
+        for (uint256 i; i < arr.length; i++) {
+            if (arr[i] == value) {
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+                return;
+            }
+        }
+    }
+
+    function _addToArray(uint256[] storage arr, uint256 value) private {
+        for (uint256 i; i < arr.length; i++) {
+            if (arr[i] == value) return; // no duplicates
+        }
+        arr.push(value);
+    }
+
     function getVersion() external pure returns (string memory) {
-        return "2.0.0";
+        return "2.1.0";
     }
 }
