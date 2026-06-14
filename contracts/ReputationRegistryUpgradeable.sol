@@ -8,6 +8,10 @@ interface IIdentityRegistry {
     function isAuthorizedOrOwner(address spender, uint256 agentId) external view returns (bool);
 }
 
+interface IOwnable{
+    function owner() external view returns(address);
+}
+
 contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
 
     int128 private constant MAX_ABS_VALUE = 1e38;
@@ -108,6 +112,20 @@ contract ReputationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         // SECURITY: Prevent self-feedback from owner and operators
         // Also reverts with ERC721NonexistentToken if agent doesn't exist
         require(!IIdentityRegistry(_identityRegistry).isAuthorizedOrOwner(msg.sender, agentId), "Self-feedback not allowed");
+
+        // SECURITY: transitive check for smart account owners
+        if (msg.sender.code.length>0){
+            try IOwnable(msg.sender).owner() returns (address contractOwner){
+
+                if(contractOwner != address(0)){
+                            require(!IIdentityRegistry(_identityRegistry).isAuthorizedOrOwner(contractOwner, agentId), "Self-feedback not allowed");
+
+                }
+
+            }
+
+            catch{}
+        }
 
         ReputationRegistryStorage storage $ = _getReputationRegistryStorage();
 
