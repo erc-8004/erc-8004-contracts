@@ -480,7 +480,7 @@ const config: HardhatUserConfig = {
       default: {
         version: "0.8.24",
         settings: {
-          evmVersion: "shanghai",
+          evmVersion: "cancun",
           optimizer: {
             enabled: true,
             runs: 200,
@@ -506,6 +506,18 @@ const config: HardhatUserConfig = {
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
+    },
+    // Pinned-time network for tests that need to run inside a specific cert validity window
+    // (e.g. real AWS Nitro Enclave attestation fixtures with timestamps in late 2024).
+    hardhatTeeAttestation: {
+      type: "edr-simulated",
+      chainType: "l1",
+      initialDate: "2024-11-30T00:00:00Z",
+      // Real Nitro attestation verification (CBOR + ASN.1 + ECDSA-384 cert chain) costs ~63M gas.
+      blockGasLimit: 150_000_000n,
+      // Pin pre-Osaka hardfork — Osaka introduces EIP-7825 (2^24 per-tx gas cap) which prevents
+      // running heavy on-chain attestation verifications.
+      hardfork: "cancun",
     },
     hardhatOp: {
       type: "edr-simulated",
