@@ -28,6 +28,8 @@ Owner:              0x547289319C3e6aedB179C0b8e8aF0B5ACd062603
   - Already deployed on mainnet/testnets
   - For localhost: deploy via `scripts/deploy-create2-factory.ts`
 - `OWNER_PRIVATE_KEY` in `.env` for generating pre-signed transactions
+- Optional `UPGRADE_GAS_PRICE_GWEI` in `.env` when the network requires a gas price other than the
+  default `20` gwei. Pre-signed transactions cannot be repriced after generation.
 
 ## Files Involved
 
@@ -57,6 +59,7 @@ npx hardhat run scripts/deploy-create2-factory.ts --network <network>
 npx hardhat run scripts/deploy-vanity.ts --network <network>
 
 # 3. Generate pre-signed upgrade transactions (requires OWNER_PRIVATE_KEY in .env)
+# Set UPGRADE_GAS_PRICE_GWEI first if the network requires a different gas price.
 npx hardhat run scripts/generate-triple-presigned-upgrade.ts --network <network>
 
 # 4. Broadcast the upgrades

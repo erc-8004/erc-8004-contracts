@@ -35,4 +35,30 @@ export const customChains: Record<string, ReturnType<typeof defineChain>> = {
     nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
     rpcUrls: { default: { http: ["https://rpc.testnet.arc.network"] } },
   }),
+  netx: defineChain({
+    id: 287,
+    name: "NetX",
+    nativeCurrency: { name: "NetX Token", symbol: "NETX", decimals: 18 },
+    rpcUrls: { default: { http: ["https://rpc.netxscan.io"] } },
+    blockExplorers: {
+      default: {
+        name: "NetXScan",
+        url: "https://netxscan.io",
+        apiUrl: "https://netxscan.io/api",
+      },
+    },
+  }),
+  netxTestnet: defineChain({
+    id: 587,
+    name: "NetX Testnet",
+    nativeCurrency: { name: "NetX Token", symbol: "NETX", decimals: 18 },
+    rpcUrls: { default: { http: ["https://testnetrpc.netxscan.io"] } },
+    blockExplorers: {
+      default: {
+        name: "NetXScan Testnet",
+        url: "https://testnet.netxscan.io",
+        apiUrl: "https://testnet.netxscan.io/api",
+      },
+    },
+  }),
 };

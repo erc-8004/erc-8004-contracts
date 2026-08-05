@@ -1,8 +1,9 @@
 import hre from "hardhat";
-import { encodeFunctionData, Hex, parseGwei, keccak256, getCreate2Address } from "viem";
+import { createPublicClient, encodeFunctionData, Hex, http, parseGwei, keccak256, getCreate2Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import dotenv from "dotenv";
 import fs from "fs";
+import { customChains } from "./custom-chains";
 import {
   SAFE_SINGLETON_FACTORY,
   IMPLEMENTATION_SALTS,
@@ -18,8 +19,20 @@ dotenv.config();
  * Simple approach: one transaction per upgrade, sequential nonces
  */
 async function main() {
-  const { viem } = await hre.network.connect();
-  const publicClient = await viem.getPublicClient();
+  const networkIdx = process.argv.indexOf("--network");
+  const networkName = networkIdx !== -1 ? process.argv[networkIdx + 1] : undefined;
+  const custom = networkName ? customChains[networkName] : undefined;
+
+  let publicClient: any;
+  if (custom) {
+    publicClient = createPublicClient({
+      chain: custom,
+      transport: http(custom.rpcUrls.default.http[0]),
+    });
+  } else {
+    const { viem } = await hre.network.connect();
+    publicClient = await viem.getPublicClient();
+  }
   const chainId = await publicClient.getChainId();
 
   // Get network-specific config
@@ -87,8 +100,11 @@ async function main() {
   // Get MinimalUUPS artifact for upgradeToAndCall
   const minimalUUPSArtifact = await hre.artifacts.readArtifact("MinimalUUPS");
 
-  // Gas settings
-  const gasPrice = parseGwei("20"); // 20 gwei
+  // Signed transactions cannot be repriced after generation.
+  const gasPriceGwei = process.env.UPGRADE_GAS_PRICE_GWEI || "20";
+  const gasPrice = parseGwei(gasPriceGwei);
+  console.log("Gas price:", `${gasPriceGwei} gwei`);
+  console.log("");
 
   // Encode initialize() calls for each implementation
   const identityInitData = encodeFunctionData({
