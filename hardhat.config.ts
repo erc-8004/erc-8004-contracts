@@ -465,6 +465,24 @@ const config: HardhatUserConfig = {
         }
       }
     },
+    287: {
+      name: "NetX",
+      blockExplorers: {
+        blockscout: {
+          url: "https://netxscan.io",
+          apiUrl: "https://netxscan.io/api",
+        }
+      }
+    },
+    587: {
+      name: "NetX Testnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://testnet.netxscan.io",
+          apiUrl: "https://testnet.netxscan.io/api",
+        }
+      }
+    },
     5042002: {
       name: "Arc Testnet",
       blockExplorers: {
@@ -786,6 +804,18 @@ const config: HardhatUserConfig = {
       chainType: "op",
       url: process.env.SHAPE_SEPOLIA_RPC_URL || "https://sepolia.shape.network",
       accounts: process.env.SHAPE_SEPOLIA_PRIVATE_KEY ? [process.env.SHAPE_SEPOLIA_PRIVATE_KEY] : [],
+    },
+    netx: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.NETX_RPC_URL || "https://rpc.netxscan.io",
+      accounts: process.env.NETX_PRIVATE_KEY ? [process.env.NETX_PRIVATE_KEY] : [],
+    },
+    netxTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.NETX_TESTNET_RPC_URL || "https://testnetrpc.netxscan.io",
+      accounts: process.env.NETX_TESTNET_PRIVATE_KEY ? [process.env.NETX_TESTNET_PRIVATE_KEY] : [],
     },
     arcTestnet: {
       type: "http",
