@@ -27,6 +27,7 @@ export const MAINNET_CHAIN_IDS = [
   295,    // Hedera
   1187947933, // SKALE Base
   360,        // Shape
+  999,        // HyperEVM
 ];
 
 /**
@@ -58,6 +59,7 @@ export const TESTNET_CHAIN_IDS = [
   324705682, // SKALE Base Sepolia
   5042002,   // Arc Testnet
   11011,     // Shape Sepolia
+  998,       // HyperEVM Testnet
 ];
 
 /**

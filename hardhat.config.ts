@@ -473,6 +473,24 @@ const config: HardhatUserConfig = {
           apiUrl: "https://testnet.arcscan.app/api",
         }
       }
+    },
+    999: {
+      name: "HyperEVM",
+      blockExplorers: {
+        etherscan: {
+          url: "https://hyperevmscan.io",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
+    },
+    998: {
+      name: "HyperEVM Testnet",
+      blockExplorers: {
+        blockscout: {
+          url: "https://explore-testnet.hyperpc.app",
+          apiUrl: "https://explore-testnet.hyperpc.app/api",
+        }
+      }
     }
   },
   solidity: {
@@ -514,13 +532,13 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: process.env.SEPOLIA_RPC_URL || "",
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
     },
     mainnet: {
       type: "http",
       chainType: "l1",
-      url: process.env.MAINNET_RPC_URL || "",
+      url: process.env.MAINNET_RPC_URL || "https://ethereum-rpc.publicnode.com",
       accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
     },
     baseSepolia: {
@@ -792,6 +810,18 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
+    },
+    hyperevm: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.HYPEREVM_RPC_URL || "https://rpc.hyperliquid.xyz/evm",
+      accounts: process.env.HYPEREVM_PRIVATE_KEY ? [process.env.HYPEREVM_PRIVATE_KEY] : [],
+    },
+    hyperevmTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.HYPEREVM_TESTNET_RPC_URL || "https://rpc.hyperliquid-testnet.xyz/evm",
+      accounts: process.env.HYPEREVM_TESTNET_PRIVATE_KEY ? [process.env.HYPEREVM_TESTNET_PRIVATE_KEY] : [],
     },
   },
 };
