@@ -473,6 +473,24 @@ const config: HardhatUserConfig = {
           apiUrl: "https://testnet.arcscan.app/api",
         }
       }
+    },
+    50: {
+      name: "XDC Network",
+      blockExplorers: {
+        etherscan: {
+          url: "https://xdcscan.com",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
+    },
+    51: {
+      name: "XDC Apothem Testnet",
+      blockExplorers: {
+        etherscan: {
+          url: "https://testnet.xdcscan.com",
+          apiUrl: "https://api.etherscan.io/v2/api",
+        }
+      }
     }
   },
   solidity: {
@@ -792,6 +810,18 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
+    },
+    xdc: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.XDC_RPC_URL || "https://rpc.xdc.org",
+      accounts: process.env.XDC_PRIVATE_KEY ? [process.env.XDC_PRIVATE_KEY] : [],
+    },
+    xdcApothem: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.XDC_APOTHEM_RPC_URL || "https://rpc.apothem.network",
+      accounts: process.env.XDC_APOTHEM_PRIVATE_KEY ? [process.env.XDC_APOTHEM_PRIVATE_KEY] : [],
     },
   },
 };
