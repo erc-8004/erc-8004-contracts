@@ -41,7 +41,7 @@
     "@types/node": "^22.18.8",
     "ethers": "^6.15.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
-    "hardhat": "^3.0.6",
+    "hardhat": "^3.4.5",
     "typescript": "~5.8.0",
     "viem": "^2.45.1"
   },
