@@ -1,0 +1,3 @@
+[submodule "erc8004-cairo"]
+	path = erc8004-cairo
+	url = https://github.com/Akashneelesh/erc8004-cairo.git
