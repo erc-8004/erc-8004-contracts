@@ -650,7 +650,7 @@ describe("ERC8004 Registries", async function () {
             keccak256(toHex("content")),
           ], { account: agentOwner.account });
         },
-        /Self-feedback not allowed|revert/
+        /SelfFeedbackNotAllowed|Self-feedback not allowed|revert/
       );
     });
 
@@ -1209,7 +1209,7 @@ describe("ERC8004 Registries", async function () {
             agentId, client.account.address, 2n
           ]);
         },
-        /index out of bounds|revert/
+        /IndexOutOfBounds|index out of bounds|revert/
       );
     });
 

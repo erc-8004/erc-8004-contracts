@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -14,6 +14,13 @@ contract IdentityRegistryUpgradeable is
     UUPSUpgradeable,
     EIP712Upgradeable
 {
+    error NotAuthorized();
+    error ReservedKey();
+    error BadWallet();
+    error Expired();
+    error DeadlineTooFar();
+    error InvalidWalletSignature();
+
     struct MetadataEntry {
         string metadataKey;
         bytes metadataValue;
@@ -86,7 +93,7 @@ contract IdentityRegistryUpgradeable is
         emit MetadataSet(agentId, "agentWallet", "agentWallet", abi.encodePacked(msg.sender));
 
         for (uint256 i; i < metadata.length; i++) {
-            require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
+            require(keccak256(bytes(metadata[i].metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, ReservedKey());
             $._metadata[agentId][metadata[i].metadataKey] = metadata[i].metadataValue;
             emit MetadataSet(agentId, metadata[i].metadataKey, metadata[i].metadataKey, metadata[i].metadataValue);
         }
@@ -100,12 +107,10 @@ contract IdentityRegistryUpgradeable is
     function setMetadata(uint256 agentId, string memory metadataKey, bytes memory metadataValue) external {
         address agentOwner = _ownerOf(agentId);
         require(
-            msg.sender == agentOwner ||
-            isApprovedForAll(agentOwner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
+            msg.sender == agentOwner || isApprovedForAll(agentOwner, msg.sender) || msg.sender == getApproved(agentId),
+            NotAuthorized()
         );
-        require(keccak256(bytes(metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, "reserved key");
+        require(keccak256(bytes(metadataKey)) != RESERVED_AGENT_WALLET_KEY_HASH, ReservedKey());
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
         $._metadata[agentId][metadataKey] = metadataValue;
         emit MetadataSet(agentId, metadataKey, metadataKey, metadataValue);
@@ -114,10 +119,8 @@ contract IdentityRegistryUpgradeable is
     function setAgentURI(uint256 agentId, string calldata newURI) external {
         address owner = ownerOf(agentId);
         require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
+            msg.sender == owner || isApprovedForAll(owner, msg.sender) || msg.sender == getApproved(agentId),
+            NotAuthorized()
         );
         _setTokenURI(agentId, newURI);
         emit URIUpdated(agentId, newURI, msg.sender);
@@ -129,34 +132,26 @@ contract IdentityRegistryUpgradeable is
         return address(bytes20(walletData));
     }
 
-    function setAgentWallet(
-        uint256 agentId,
-        address newWallet,
-        uint256 deadline,
-        bytes calldata signature
-    ) external {
+    function setAgentWallet(uint256 agentId, address newWallet, uint256 deadline, bytes calldata signature) external {
         address owner = ownerOf(agentId);
         require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
+            msg.sender == owner || isApprovedForAll(owner, msg.sender) || msg.sender == getApproved(agentId),
+            NotAuthorized()
         );
-        require(newWallet != address(0), "bad wallet");
-        require(block.timestamp <= deadline, "expired");
-        require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, "deadline too far");
+        require(newWallet != address(0), BadWallet());
+        require(block.timestamp <= deadline, Expired());
+        require(deadline <= block.timestamp + MAX_DEADLINE_DELAY, DeadlineTooFar());
 
         bytes32 structHash = keccak256(abi.encode(AGENT_WALLET_SET_TYPEHASH, agentId, newWallet, owner, deadline));
         bytes32 digest = _hashTypedDataV4(structHash);
 
         // Try ECDSA first (EOAs + EIP-7702 delegated EOAs)
-        (address recovered, ECDSA.RecoverError err, ) = ECDSA.tryRecover(digest, signature);
+        (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecover(digest, signature);
         if (err != ECDSA.RecoverError.NoError || recovered != newWallet) {
             // ECDSA failed, try ERC1271 (smart contract wallets)
-            (bool ok, bytes memory res) = newWallet.staticcall(
-                abi.encodeCall(IERC1271.isValidSignature, (digest, signature))
-            );
-            require(ok && res.length >= 32 && abi.decode(res, (bytes4)) == ERC1271_MAGICVALUE, "invalid wallet sig");
+            (bool ok, bytes memory res) =
+                newWallet.staticcall(abi.encodeCall(IERC1271.isValidSignature, (digest, signature)));
+            require(ok && res.length >= 32 && abi.decode(res, (bytes4)) == ERC1271_MAGICVALUE, InvalidWalletSignature());
         }
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();
@@ -167,10 +162,8 @@ contract IdentityRegistryUpgradeable is
     function unsetAgentWallet(uint256 agentId) external {
         address owner = ownerOf(agentId);
         require(
-            msg.sender == owner ||
-            isApprovedForAll(owner, msg.sender) ||
-            msg.sender == getApproved(agentId),
-            "Not authorized"
+            msg.sender == owner || isApprovedForAll(owner, msg.sender) || msg.sender == getApproved(agentId),
+            NotAuthorized()
         );
 
         IdentityRegistryStorage storage $ = _getIdentityRegistryStorage();

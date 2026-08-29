@@ -292,7 +292,7 @@ describe("ERC8004 Registries", async function () {
 
       await assert.rejects(
         identityRegistry.write.setMetadata([agentId, "agentWallet", toHex("0xdeadbeef")]),
-        /reserved key/i
+        /ReservedKey|reserved key/i
       );
     });
 
@@ -305,7 +305,7 @@ describe("ERC8004 Registries", async function () {
 
       await assert.rejects(
         identityRegistry.write.register(["ipfs://agent", metadata]),
-        /reserved key/i
+        /ReservedKey|reserved key/i
       );
     });
 
@@ -401,7 +401,7 @@ describe("ERC8004 Registries", async function () {
           [agentId, newWalletSigner.account.address, deadline, signature],
           { account: owner.account }
         ),
-        /invalid wallet sig/i
+        /InvalidWalletSignature|invalid wallet sig/i
       );
     });
 
@@ -446,7 +446,7 @@ describe("ERC8004 Registries", async function () {
           [agentId, newWalletSigner.account.address, deadline, signature],
           { account: owner.account }
         ),
-        /expired/i
+        /Expired|expired/i
       );
     });
 
@@ -491,7 +491,7 @@ describe("ERC8004 Registries", async function () {
           [agentId, newWalletSigner.account.address, deadline, signature],
           { account: owner.account }
         ),
-        /deadline too far/i
+        /DeadlineTooFar|deadline too far/i
       );
     });
 
@@ -537,7 +537,7 @@ describe("ERC8004 Registries", async function () {
           [agentId, newWalletSigner.account.address, deadline, signature],
           { account: attacker.account }
         ),
-        /Not authorized/i
+        /NotAuthorized|Not authorized/i
       );
     });
 
@@ -924,7 +924,7 @@ describe("ERC8004 Registries", async function () {
             keccak256(toHex("content")),
           ], { account: agentOwner.account });
         },
-        /Self-feedback not allowed|revert/
+        /SelfFeedbackNotAllowed|Self-feedback not allowed|revert/
       );
     });
 
@@ -1483,7 +1483,7 @@ describe("ERC8004 Registries", async function () {
             agentId, client.account.address, 2n
           ]);
         },
-        /index out of bounds|revert/
+        /IndexOutOfBounds|index out of bounds|revert/
       );
     });
 

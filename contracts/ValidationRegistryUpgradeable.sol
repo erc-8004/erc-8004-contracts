@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,6 +11,14 @@ interface IIdentityRegistry {
 }
 
 contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
+    error BadIdentity();
+    error BadValidator();
+    error ValidationExists();
+    error NotAuthorized();
+    error UnknownRequest();
+    error NotValidator();
+    error ResponseOutOfRange();
+
     event ValidationRequest(
         address indexed validatorAddress,
         uint256 indexed agentId,
@@ -31,7 +39,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     struct ValidationStatus {
         address validatorAddress;
         uint256 agentId;
-        uint8 response;       // 0..100
+        uint8 response; // 0..100
         bytes32 responseHash;
         string tag;
         uint256 lastUpdate;
@@ -67,7 +75,7 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function initialize(address identityRegistry_) public reinitializer(2) onlyOwner {
-        require(identityRegistry_ != address(0), "bad identity");
+        require(identityRegistry_ != address(0), BadIdentity());
         _identityRegistry = identityRegistry_;
     }
 
@@ -82,17 +90,16 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 requestHash
     ) external {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
-        require(validatorAddress != address(0), "bad validator");
-        require($.validations[requestHash].validatorAddress == address(0), "exists");
+        require(validatorAddress != address(0), BadValidator());
+        require($.validations[requestHash].validatorAddress == address(0), ValidationExists());
 
         // Check permission: caller must be owner or approved operator
         IIdentityRegistry registry = IIdentityRegistry(_identityRegistry);
         address owner = registry.ownerOf(agentId);
         require(
-            msg.sender == owner ||
-            registry.isApprovedForAll(owner, msg.sender) ||
-            registry.getApproved(agentId) == msg.sender,
-            "Not authorized"
+            msg.sender == owner || registry.isApprovedForAll(owner, msg.sender)
+                || registry.getApproved(agentId) == msg.sender,
+            NotAuthorized()
         );
 
         $.validations[requestHash] = ValidationStatus({
@@ -121,9 +128,9 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     ) external {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         ValidationStatus storage s = $.validations[requestHash];
-        require(s.validatorAddress != address(0), "unknown");
-        require(msg.sender == s.validatorAddress, "not validator");
-        require(response <= 100, "resp>100");
+        require(s.validatorAddress != address(0), UnknownRequest());
+        require(msg.sender == s.validatorAddress, NotValidator());
+        require(response <= 100, ResponseOutOfRange());
         s.response = response;
         s.responseHash = responseHash;
         s.tag = tag;
@@ -135,22 +142,28 @@ contract ValidationRegistryUpgradeable is OwnableUpgradeable, UUPSUpgradeable {
     function getValidationStatus(bytes32 requestHash)
         external
         view
-        returns (address validatorAddress, uint256 agentId, uint8 response, bytes32 responseHash, string memory tag, uint256 lastUpdate)
+        returns (
+            address validatorAddress,
+            uint256 agentId,
+            uint8 response,
+            bytes32 responseHash,
+            string memory tag,
+            uint256 lastUpdate
+        )
     {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         ValidationStatus memory s = $.validations[requestHash];
-        require(s.validatorAddress != address(0), "unknown");
+        require(s.validatorAddress != address(0), UnknownRequest());
         return (s.validatorAddress, s.agentId, s.response, s.responseHash, s.tag, s.lastUpdate);
     }
 
-    function getSummary(
-        uint256 agentId,
-        address[] calldata validatorAddresses,
-        string calldata tag
-    ) external view returns (uint64 count, uint8 avgResponse) {
+    function getSummary(uint256 agentId, address[] calldata validatorAddresses, string calldata tag)
+        external
+        view
+        returns (uint64 count, uint8 avgResponse)
+    {
         ValidationRegistryStorage storage $ = _getValidationRegistryStorage();
         uint256 totalResponse;
-
         bytes32[] storage requestHashes = $._agentValidations[agentId];
 
         for (uint256 i; i < requestHashes.length; i++) {
