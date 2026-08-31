@@ -58,6 +58,7 @@ export const TESTNET_CHAIN_IDS = [
   324705682, // SKALE Base Sepolia
   5042002,   // Arc Testnet
   11011,     // Shape Sepolia
+  91342,     // GIWA Sepolia
 ];
 
 /**
