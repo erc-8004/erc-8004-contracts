@@ -793,6 +793,12 @@ const config: HardhatUserConfig = {
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
     },
+    giwaSepolia: {
+      type: "http",
+      chainType: "op",
+      url: process.env.GIWA_SEPOLIA_RPC_URL || "https://sepolia-rpc.giwa.io",
+      accounts: process.env.GIWA_SEPOLIA_PRIVATE_KEY ? [process.env.GIWA_SEPOLIA_PRIVATE_KEY] : [],
+    },
   },
 };
 

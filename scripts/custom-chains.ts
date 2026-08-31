@@ -35,4 +35,10 @@ export const customChains: Record<string, ReturnType<typeof defineChain>> = {
     nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
     rpcUrls: { default: { http: ["https://rpc.testnet.arc.network"] } },
   }),
+  giwaSepolia: defineChain({
+    id: 91342,
+    name: "GIWA Sepolia",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: { default: { http: ["https://sepolia-rpc.giwa.io"] } },
+  }),
 };
