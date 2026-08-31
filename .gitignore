@@ -9,6 +9,7 @@
 
 # Hardhat Build Artifacts
 /artifacts
+/out
 
 # Hardhat compilation (v2) support directory
 /cache
