@@ -301,6 +301,32 @@ This emits:
 event FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, uint64 indexed feedbackIndex)
 ```
 
+#### Worked Example: Binding-Time Grounding
+
+When a feedback entry references an on-chain payment (e.g., via `proofOfPayment.txHash` in the off-chain feedback file), an off-chain consumer must decide **which wallet binding is authoritative when matching the payment to the agent's wallet**. Because the Identity Registry permits the owner to rebind `agentWallet` at any time, three readings are possible:
+
+- **Payment reading** — the binding at the payment transaction's block.
+- **Feedback reading** — the binding at the feedback transaction's block.
+- **Now reading** — the current binding.
+
+These three readings can diverge. The following live recordings on Base Sepolia (chain id 84532) show three ways they diverge; the full discussion (and the original hashes) is in [issue #99](https://github.com/erc-8004/erc-8004-contracts/issues/99).
+
+**Case 1 — payment, then rebind before feedback.** Agent `10402` was registered and bound to W1 (`0xd8e0255e9fdEA05b27641CC0cc6e69592CB50c83`, block `50053079`); the payer paid 0.01 USDC in `0x6f6fb918fb1eec9e735ada7c171034f7654f393d473f971c3aa3f25e4ec7519b` (block `50053105`); the owner then rebound `agentWallet` to W2 (`0x42F79850339055277652B4E6c8590B8d2bA234E8`, block `50053130`); the payer submitted feedback referencing the payment in `0x0e6fd183266ac1e43a88b68708899b9fef3daa25fd3b35a29baf94a1feab7d9f` (block `50053155`). `agent-receipt-verify` reports the paid address *was* the bound address at the payment block (grounded under the payment reading) but *was not* at the feedback block, because the agent had already moved to W2 (not grounded under the feedback reading).
+
+**Case 2 — payment before registration.** A USDC payment (tx `0xbd97b92c32ac8a218d19272658d5ad67b03d03396701d62a4a498e421aaaa60b`) was made *before* the agent existed. The agent was then registered (agentId `10419`), its wallet bound to W1, and feedback referencing the payment was submitted (tx `0x9759e77075505c9b2d9b25481cf2c1aa670af05a30329f795d9bfb5f495d6048`). Under the payment reading there was no binding at the payment block, so the payment is *not* attributable to W1; an implementer that reads the binding at feedback time instead would wrongly ground it.
+
+**Case 3 — wallet rebound after feedback.** Agent `10420` was registered and bound to W1; a payment (tx `0x0f69594fd2358184cadc81f9e2143036aec9b6dc0708c59aa2b5317713e4d51e`) and feedback (tx `0x177a09a7c8c42678586bfa91773a87b1c1f78bd5d217c28539bce853e36d94a3`) referencing it were submitted; the owner then rebound `agentWallet` to W2. The payment and feedback readings ground the payment to W1; the now reading grounds it to W2. Any off-chain aggregation that caches a grounding result MUST re-evaluate it on rebind, or it will permanently attribute the payment to the wrong wallet.
+
+The three readings for each case (verified with `agent-receipt-verify` on Base Sepolia):
+
+| Case | Payment reading | Feedback reading | Now reading |
+| --- | --- | --- | --- |
+| 1 — payment, then rebind before feedback (`10402`) | grounded (paid addr was bound at payment block) | not grounded (rebound to W2 by feedback block) | not grounded |
+| 2 — payment before registration (`10419`) | not grounded (no agent/binding at payment block) | grounded (bound to W1 at feedback block) | grounded (W1) |
+| 3 — rebind after feedback (`10420`) | grounded (W1) | grounded (W1) | not grounded (W2) |
+
+Which reading is authoritative is left as an explicit design choice; the table shows the consequences of each. The **payment reading** attributes the payment to the binding that existed when the payer paid; the **feedback reading** attributes it to the binding the agent had committed to when the feedback was given; the **now reading** uses the live binding. Consumers that cache a grounding result MUST re-evaluate it on rebind, whichever reading they adopt.
+
 #### Appending Responses
 
 Anyone (e.g., the *agentId* showing a refund, any off-chain data intelligence aggregator tagging feedback as spam) can call:
