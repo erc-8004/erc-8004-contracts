@@ -473,7 +473,25 @@ const config: HardhatUserConfig = {
           apiUrl: "https://testnet.arcscan.app/api",
         }
       }
-    }
+    },
+    47763: {
+      name: "Neo X",
+      blockExplorers: {
+        blockscout: {
+          url: "https://xexplorer.neo.org",
+          apiUrl: "https://xexplorer.neo.org:8877/api",
+        }
+      }
+    },
+    12227332: {
+      name: "Neo X T4",
+      blockExplorers: {
+        blockscout: {
+          url: "https://neoxt4scan.ngd.network",
+          apiUrl: "https://xt4scan.ngd.network:8877/api",
+        }
+      }
+    },
   },
   solidity: {
     profiles: {
@@ -792,6 +810,22 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.ARC_TESTNET_PRIVATE_KEY ? [process.env.ARC_TESTNET_PRIVATE_KEY] : [],
+    },
+    neox: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.NEOX_RPC_URL || "https://mainnet-1.rpc.banelabs.org/",
+      accounts: process.env.NEOX_PRIVATE_KEY ? [process.env.NEOX_PRIVATE_KEY] : [],
+      // Neo X rejects transactions below a 20 gwei base fee plus a 20 gwei tip.
+      gasPrice: 40_000_000_000,
+    },
+    neoxTestnet: {
+      type: "http",
+      chainType: "l1",
+      url: process.env.NEOX_TESTNET_RPC_URL || "https://neoxt4seed1.ngd.network",
+      accounts: process.env.NEOX_TESTNET_PRIVATE_KEY ? [process.env.NEOX_TESTNET_PRIVATE_KEY] : [],
+      // Neo X T4 uses the same 20 gwei base fee plus 20 gwei minimum tip.
+      gasPrice: 40_000_000_000,
     },
   },
 };
